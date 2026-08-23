@@ -1,15 +1,18 @@
 const { 
   Client, 
   GatewayIntentBits, 
+  SlashCommandBuilder, 
+  REST, 
+  Routes, 
+  EmbedBuilder, 
   ActionRowBuilder, 
   ButtonBuilder, 
   ButtonStyle, 
   ModalBuilder, 
   TextInputBuilder, 
-  TextInputStyle, 
-  EmbedBuilder, 
-  Events 
+  TextInputStyle 
 } = require('discord.js');
+const fs = require('fs');
 
 const client = new Client({
   intents: [
@@ -19,144 +22,175 @@ const client = new Client({
   ]
 });
 
-const CLASSES = [
-  { id: 'culinh', name: 'Cửu Linh', emoji: '🔮' },
-  { id: 'thantuong', name: 'Thần Tướng', emoji: '⚡' },
-  { id: 'thiety', name: 'Thiết Y', emoji: '🛡️' },
-  { id: 'toaimong', name: 'Toái Mộng', emoji: '🗡️' },
-  { id: 'longngam', name: 'Long Ngâm', emoji: '🐉' },
-  { id: 'tovan', name: 'Tố Vấn', emoji: '🌸' },
-  { id: 'huyetha', name: 'Huyết Hà', emoji: '🩸' }
-];
+const DATA_FILE = './diemdanh_data.json';
+if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, JSON.stringify({}));
 
-const sessions = new Map();
+// Danh sách Slash Commands
+const commands = [
+  new SlashCommandBuilder().setName('tao-phien').setDescription('Tạo phiên điểm danh Bang chiến mới'),
+  new SlashCommandBuilder().setName('check-gay').setDescription('Check độ Gay').addUserOption(opt => opt.setName('user').setDescription('Người muốn check')),
+  new SlashCommandBuilder().setName('check-beophi').setDescription('Check độ Béo Phì').addUserOption(opt => opt.setName('user').setDescription('Người muốn check')),
+  new SlashCommandBuilder().setName('check-wibu').setDescription('Check độ Wibu').addUserOption(opt => opt.setName('user').setDescription('Người muốn check')),
+  new SlashCommandBuilder().setName('check-haiten').setDescription('Check độ nghiện Hentai').addUserOption(opt => opt.setName('user').setDescription('Người muốn check'))
+].map(cmd => cmd.toJSON());
 
-function buildEmbed(sessionData) {
-  let total = 0;
-  CLASSES.forEach(c => total += sessionData.members[c.id].length);
+// Bảng câu phán tục tĩu / mỏ hỗn theo %
+function getComment(type, rate) {
+  const comments = {
+    'check-gay': [
+      { max: 20, text: 'Thẳng như thước kẻ! Nhưng coi chừng thước nhựa uốn dẻo nha con.' },
+      { max: 50, text: 'Hơi bóng bẩy rồi đấy, nhìn trai đẹp mắt sáng rỡ đúng không?' },
+      { max: 80, text: 'Gần chạm đỉnh rồi! Thèm dầu ăn với muốn thông đít lắm rồi chứ gì?' },
+      { max: 100, text: 'Gay chúa! Nhìn đâu cũng ra con mồi, né xa cớm ra không nó đè!' }
+    ],
+    'check-beophi': [
+      { max: 20, text: 'Người như con mắm xức dầu, gió thổi cái bay màu luôn!' },
+      { max: 50, text: 'Thịt thà vừa tầm, nhưng bớt nạp trà sữa lại không nọng cằm nó rớt.' },
+      { max: 80, text: 'Thở thôi cũng mập! Đi đứng nhẹ nhàng thôi không gãy sàn nhà người ta.' },
+      { max: 100, text: 'Tròn như cái lu! Béo cừu béo lợn, lỡ té một cái chắc lăn 3 vòng mới dừng.' }
+    ],
+    'check-wibu': [
+      { max: 20, text: 'Người bình thường, chưa bị tha hóa bởi hoạt hình Nhật Bản.' },
+      { max: 50, text: 'Thỉnh thoảng hay mơ làm Main anime, tối ngủ hay gáy Kimochi đúng không?' },
+      { max: 80, text: 'Wibu chúa! Đốt tiền mua gối ôm gái 2D, mở miệng ra là Yamete Kudasai.' },
+      { max: 100, text: 'Hết cứu! Mùi mồ hôi chua lè chuẩn Wibu lâu năm, tha cho đời đi con.' }
+    ],
+    'check-haiten': [
+      { max: 20, text: 'Tâm trong sáng như nước lèo, chưa biết mùi đen tối là gì.' },
+      { max: 50, text: 'Đã biết mò link, thuộc vài mã code 6 số rồi đấy nha cháu.' },
+      { max: 80, text: 'Đầu óc toàn đen tối! Tay lúc nào cũng để dưới bàn, quay tay ít thôi xước đít!' },
+      { max: 100, text: 'Thần dâm tái thế! Mắt thâm như gấu trúc, kho tài liệu 200GB hentai chứ gì?' }
+    ]
+  };
+
+  const list = comments[type];
+  for (const item of list) {
+    if (rate <= item.max) return item.text;
+  }
+  return 'Cực phẩm mỏ hỗn!';
+}
+
+client.once('ready', async () => {
+  console.log(`✅ Bot đã đăng nhập thành công: ${client.user.tag}`);
+  const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+  try {
+    await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
+    console.log('⚡ Đã cập nhật xong các Slash Commands!');
+  } catch (err) {
+    console.error('Lỗi đăng ký lệnh:', err);
+  }
+});
+
+client.on('interactionCreate', async interaction => {
+  if (interaction.isChatInputCommand()) {
+    const { commandName } = interaction;
+
+    if (commandName === 'tao-phien') {
+      const data = JSON.parse(fs.readFileSync(DATA_FILE));
+      data[interaction.channelId] = { co_mat: [], xin_vang: [] };
+      fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+
+      const embed = new EmbedBuilder()
+        .setTitle('⚔️ ĐIỂM DANH BANG CHIẾN')
+        .setDescription('Vui lòng chọn nút bên dưới để điểm danh trạng thái tham gia của bạn!')
+        .setColor(0x38bdf8)
+        .addFields(
+          { name: '✅ Có mặt (0)', value: 'Chưa có ai', inline: true },
+          { name: '❌ Xin vắng (0)', value: 'Chưa có ai', inline: true }
+        );
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('dd_comat').setLabel('Có mặt').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('dd_xinvang').setLabel('Xin vắng').setStyle(ButtonStyle.Danger)
+      );
+
+      return interaction.reply({ embeds: [embed], components: [row] });
+    }
+
+    if (['check-gay', 'check-beophi', 'check-wibu', 'check-haiten'].includes(commandName)) {
+      const target = interaction.options.getUser('user') || interaction.user;
+      const rate = Math.floor(Math.random() * 101);
+      const comment = getComment(commandName, rate);
+      
+      const titles = {
+        'check-gay': '🌈 CHECK ĐỘ GAY',
+        'check-beophi': '🍔 CHECK ĐỘ BÉO PHÌ',
+        'check-wibu': '🌸 CHECK ĐỘ WIBU',
+        'check-haiten': '🔞 CHECK ĐỘ HENTAI'
+      };
+
+      const embed = new EmbedBuilder()
+        .setTitle(titles[commandName])
+        .setDescription(`Kết quả phân tích cho ${target}:\nTỉ lệ: **${rate}%**\n\n🗣️ **AI nhận xét:** *${comment}*`)
+        .setColor(rate > 50 ? 0xff0055 : 0x00ff88);
+
+      return interaction.reply({ embeds: [embed] });
+    }
+  }
+
+  if (interaction.isButton()) {
+    const data = JSON.parse(fs.readFileSync(DATA_FILE));
+    const channelData = data[interaction.channelId] || { co_mat: [], xin_vang: [] };
+
+    if (interaction.customId === 'dd_comat') {
+      channelData.co_mat = channelData.co_mat.filter(u => u.id !== interaction.user.id);
+      channelData.xin_vang = channelData.xin_vang.filter(u => u.id !== interaction.user.id);
+      channelData.co_mat.push({ id: interaction.user.id, name: interaction.user.username });
+      
+      data[interaction.channelId] = channelData;
+      fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+
+      await updateEmbed(interaction, channelData);
+      return interaction.reply({ content: '✅ Bạn đã điểm danh **Có mặt**!', ephemeral: true });
+    }
+
+    if (interaction.customId === 'dd_xinvang') {
+      const modal = new ModalBuilder()
+        .setCustomId('modal_lydo')
+        .setTitle('Lý do xin vắng');
+      
+      const input = new TextInputBuilder()
+        .setCustomId('input_lydo')
+        .setLabel('Ghi rõ lý do xin vắng')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true);
+
+      modal.addComponents(new ActionRowBuilder().addComponents(input));
+      return interaction.showModal(modal);
+    }
+  }
+
+  if (interaction.isModalSubmit() && interaction.customId === 'modal_lydo') {
+    const lydo = interaction.fields.getTextInputValue('input_lydo');
+    const data = JSON.parse(fs.readFileSync(DATA_FILE));
+    const channelData = data[interaction.channelId] || { co_mat: [], xin_vang: [] };
+
+    channelData.co_mat = channelData.co_mat.filter(u => u.id !== interaction.user.id);
+    channelData.xin_vang = channelData.xin_vang.filter(u => u.id !== interaction.user.id);
+    channelData.xin_vang.push({ id: interaction.user.id, name: interaction.user.username, lydo });
+
+    data[interaction.channelId] = channelData;
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+
+    await updateEmbed(interaction, channelData);
+    return interaction.reply({ content: '❌ Đã ghi nhận lý do vắng của bạn!', ephemeral: true });
+  }
+});
+
+async function updateEmbed(interaction, channelData) {
+  const coMatText = channelData.co_mat.length > 0 ? channelData.co_mat.map(u => `<@${u.id}>`).join('\n') : 'Chưa có ai';
+  const xinVangText = channelData.xin_vang.length > 0 ? channelData.xin_vang.map(u => `<@${u.id}> (${u.lydo})`).join('\n') : 'Chưa có ai';
 
   const embed = new EmbedBuilder()
-    .setTitle(`⚔️ ${sessionData.title}`)
-    .setColor('#0099FF')
+    .setTitle('⚔️ ĐIỂM DANH BANG CHIẾN')
+    .setDescription('Vui lòng chọn nút bên dưới để điểm danh trạng thái tham gia của bạn!')
+    .setColor(0x38bdf8)
     .addFields(
-      { name: 'Trạng thái', value: '🟢 Đang mở', inline: false },
-      { name: 'Session ID', value: `\`${sessionData.id}\``, inline: false },
-      { name: `Tổng cộng: ${total} người`, value: '\u200B', inline: false }
+      { name: `✅ Có mặt (${channelData.co_mat.length})`, value: coMatText, inline: true },
+      { name: `❌ Xin vắng (${channelData.xin_vang.length})`, value: xinVangText, inline: true }
     );
 
-  CLASSES.forEach(c => {
-    const list = sessionData.members[c.id];
-    const memberText = list.length > 0 ? list.map(m => `• ${m.name}`).join('\n') : '*Trống*';
-    embed.addFields({
-      name: `${c.emoji} ${c.name} (${list.length})`,
-      value: memberText,
-      inline: false
-    });
-  });
-
-  const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-  embed.setFooter({ text: `Cập nhật: Hôm nay lúc ${now}` });
-  return embed;
+  await interaction.message.edit({ embeds: [embed] });
 }
 
-function buildComponents() {
-  const rows = [];
-  let currentRow = new ActionRowBuilder();
-
-  CLASSES.forEach((c, index) => {
-    if (index > 0 && index % 3 === 0) {
-      rows.push(currentRow);
-      currentRow = new ActionRowBuilder();
-    }
-    currentRow.addComponents(
-      new ButtonBuilder()
-        .setCustomId(`btn_class_${c.id}`)
-        .setLabel(c.name)
-        .setEmoji(c.emoji)
-        .setStyle(ButtonStyle.Secondary)
-    );
-  });
-  rows.push(currentRow);
-
-  const actionRow = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('btn_cancel').setLabel('Bỏ điểm danh').setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId('btn_busy').setLabel('Báo bận').setEmoji('⌛').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('btn_unbusy').setLabel('Hủy báo bận').setEmoji('✅').setStyle(ButtonStyle.Secondary)
-  );
-  rows.push(actionRow);
-
-  return rows;
-}
-
-client.on(Events.MessageCreate, async (message) => {
-  if (message.author.bot || !message.content.startsWith('!diemdanh')) return;
-
-  const title = message.content.replace('!diemdanh', '').trim() || 'Tên sự kiện';
-  const sessionId = Math.floor(10000000 + Math.random() * 90000000).toString();
-
-  const initialData = { id: sessionId, title: title, members: {} };
-  CLASSES.forEach(c => initialData.members[c.id] = []);
-
-  const embed = buildEmbed(initialData);
-  const components = buildComponents();
-
-  const msg = await message.channel.send({ embeds: [embed], components });
-  sessions.set(msg.id, initialData);
-});
-
-client.on(Events.InteractionCreate, async (interaction) => {
-  const sessionData = sessions.get(interaction.message?.id);
-
-  if (interaction.isButton() && interaction.customId.startsWith('btn_class_')) {
-    if (!sessionData) return interaction.reply({ content: 'Phiên điểm danh này đã hết hạn!', ephemeral: true });
-
-    const classId = interaction.customId.replace('btn_class_', '');
-    const modal = new ModalBuilder()
-      .setCustomId(`modal_${classId}_${interaction.message.id}`)
-      .setTitle('Nhập tên In-Game');
-
-    const nameInput = new TextInputBuilder()
-      .setCustomId('ingame_input')
-      .setLabel('Tên In-Game *')
-      .setPlaceholder('VD: BonLang #1234')
-      .setStyle(TextInputStyle.Short)
-      .setRequired(true);
-
-    modal.addComponents(new ActionRowBuilder().addComponents(nameInput));
-    await interaction.showModal(modal);
-  }
-
-  if (interaction.isButton() && interaction.customId === 'btn_cancel') {
-    if (!sessionData) return interaction.reply({ content: 'Phiên điểm danh không tồn tại!', ephemeral: true });
-
-    CLASSES.forEach(c => {
-      sessionData.members[c.id] = sessionData.members[c.id].filter(m => m.userId !== interaction.user.id);
-    });
-
-    await interaction.message.edit({ embeds: [buildEmbed(sessionData)] });
-    await interaction.reply({ content: 'Đã hủy điểm danh của bạn!', ephemeral: true });
-  }
-
-  if (interaction.isModalSubmit() && interaction.customId.startsWith('modal_')) {
-    const [, classId, messageId] = interaction.customId.split('_');
-    const targetSession = sessions.get(messageId);
-    if (!targetSession) return interaction.reply({ content: 'Không tìm thấy phiên điểm danh!', ephemeral: true });
-
-    const ingameName = interaction.fields.getTextInputValue('ingame_input');
-
-    CLASSES.forEach(c => {
-      targetSession.members[c.id] = targetSession.members[c.id].filter(m => m.userId !== interaction.user.id);
-    });
-
-    targetSession.members[classId].push({ userId: interaction.user.id, name: ingameName });
-
-    const channel = await client.channels.fetch(interaction.channelId);
-    const targetMsg = await channel.messages.fetch(messageId);
-    await targetMsg.edit({ embeds: [buildEmbed(targetSession)] });
-
-    await interaction.reply({ content: `Đã ghi nhận báo danh **${ingameName}**!`, ephemeral: true });
-  }
-});
-
-// Thay mã Token của bạn vào đây:
-client.login('MTU0MDgxNjk3NzI2NDY0MDA2MQ.G1nyic.9MPYrLMC2-WE1bawv-F0xgmwMpMaRtrZDKEIvI');
+client.login(process.env.TOKEN);
