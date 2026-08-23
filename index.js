@@ -16,8 +16,8 @@ const {
   ChannelType
 } = require('discord.js');
 
-// ⚠️ Thay Token Bot của bạn vào đây
-const TOKEN = 'YOUR_BOT_TOKEN_HERE';
+// ⚠️ Bot sử dụng Process Environment Variable TOKEN
+const TOKEN = process.env.TOKEN || 'YOUR_BOT_TOKEN_HERE';
 
 const BANNER_IMAGE = 'https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Z2eDFwZXRyNWJ1aGhybnMwbWN5OHAwMmdtbHJvMHFvMm5mMnF0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/L2XhHcmM55533fYnmA/giphy.gif';
 
@@ -30,6 +30,16 @@ const CLASSES = [
   { id: 'tovan', name: 'Tố Vấn', emoji: '🌸' },
   { id: 'huyetha', name: 'Huyết Hà', emoji: '🩸' }
 ];
+
+// GIF Anime Minh Họa cho từng lệnh Check
+const CHECK_IMAGES = {
+  gay: 'https://media.giphy.com/media/26gspjl5bxzhxoBWw/giphy.gif',
+  les: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHYyOXhyNm1iZ3VreGtkbmdyNnk5ejFudGtrZTRldXlsNjcxMHVndyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0IybQ6l8J454o52w/giphy.gif',
+  beophi: 'https://media.giphy.com/media/dJe8wgptDLAv9Re78T/giphy.gif',
+  wibu: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif',
+  haiten: 'https://media.giphy.com/media/6vE3Y7KE6ss8M/giphy.gif',
+  saygex: 'https://media.giphy.com/media/3o7TKzb326hYin7JFS/giphy.gif'
+};
 
 const client = new Client({
   intents: [
@@ -59,6 +69,54 @@ function createProgressBar(percent, emoji = '🏳️‍🌈') {
   const progress = Math.round((percent / 100) * total);
   const empty = total - progress;
   return `[${emoji.repeat(progress)}${'⬛'.repeat(empty)}] **${percent}%**`;
+}
+
+// Hàm trả về comment mặn mòi, bựa cho từng loại
+function getCheckComment(type, percent) {
+  const comments = {
+    gay: [
+      { max: 15, text: 'Thẳng như thước kẻ! Nhưng coi chừng thước nhựa uốn dẻo nha con.' },
+      { max: 45, text: 'Nhìn trai đẹp bắt đầu thấy sáng rỡ mắt lên rồi đấy, bớt "dẻo" lại!' },
+      { max: 75, text: 'Bóng gồng quá cha ơi! Mùi dầu ăn nép sau lưng bốc lên nồng nặc rồi!' },
+      { max: 100, text: 'Gay chúa hạ sang! Nhìn đâu cũng ra con mồi, né xa cớm ra kẻo nó đè!' }
+    ],
+    les: [
+      { max: 15, text: 'Gái thẳng băng, chưa biết mùi bách hợp là cái gì.' },
+      { max: 45, text: 'Hay ngắm mông ngực chị em trong nhóm đúng không? Có vết rồi nha!' },
+      { max: 75, text: 'Thích liếm má gái đẹp, mê con gái hơn mê con trai rõ mười mươi!' },
+      { max: 100, text: 'Nữ vương Bách Hợp! Trai ghen tị vì chị lượm hết gái đẹp trong server!' }
+    ],
+    beophi: [
+      { max: 15, text: 'Người như con mắm xức dầu, gió thổi nhẹ cái bay màu luôn!' },
+      { max: 45, text: 'Thịt thà vừa tầm, nhưng bớt nạp trà sữa lại không nọng cằm nó rớt.' },
+      { max: 75, text: 'Thở thôi cũng mập! Đi đứng nhẹ nhàng không gãy sàn nhà người ta.' },
+      { max: 100, text: 'Tròn như cái lu! Béo cừu béo lợn, lỡ té một cái lăn 3 vòng mới dừng!' }
+    ],
+    wibu: [
+      { max: 15, text: 'Người bình thường, chưa bị tha hóa bởi hoạt hình Nhật Bản.' },
+      { max: 45, text: 'Thỉnh thoảng hay mơ làm Main anime, tối ngủ hay gáy Kimochi đúng không?' },
+      { max: 80, text: 'Wibu chúa! Đốt tiền mua gối ôm gái 2D, mở miệng ra là Yamete Kudasai.' },
+      { max: 100, text: 'Hết cứu! Mùi mồ hôi chua lè chuẩn Wibu lâu năm, tha cho đời đi con.' }
+    ],
+    haiten: [
+      { max: 15, text: 'Tâm trong sáng như nước lèo, chưa biết mùi đen tối là gì.' },
+      { max: 45, text: 'Đã biết mò link, thuộc vài mã code 6 số rồi đấy nha cháu.' },
+      { max: 75, text: 'Đầu óc toàn đen tối! Tay lúc nào cũng để dưới bàn, quay tay ít thôi xước đít!' },
+      { max: 100, text: 'Thần dâm tái thế! Mắt thâm như gấu trúc, kho tài liệu 200GB hentai chứ gì?' }
+    ],
+    saygex: [
+      { max: 15, text: 'Tâm hồn thanh tịnh, chưa bao giờ mơ thấy cảnh đấu kiếm.' },
+      { max: 45, text: 'Bắt đầu có máu Say Gex trong người, hay liếc mông mấy thằng anh em.' },
+      { max: 75, text: 'Đam mê thông đít đấu kiếm nồng cháy! Thèm cảm giác mạnh dữ lắm rồi!' },
+      { max: 100, text: 'BẬC THẦY SAY GEX! Địch hay đệ cũng cởi quần ra đâm tuốt, né xa 10m!' }
+    ]
+  };
+
+  const list = comments[type] || [];
+  for (const item of list) {
+    if (percent <= item.max) return item.text;
+  }
+  return 'Cực phẩm mặn mòi!';
 }
 
 function buildEmbed(session) {
@@ -192,6 +250,11 @@ client.on(Events.ClientReady, async () => {
         new SlashCommandBuilder()
           .setName('check-haiten')
           .setDescription('Kiểm tra chỉ số nghiện HaiTen (Hentai) của bản thân hoặc người khác')
+          .addUserOption(opt => opt.setName('user').setDescription('Thành viên muốn kiểm tra').setRequired(false)),
+
+        new SlashCommandBuilder()
+          .setName('check-saygex')
+          .setDescription('Kiểm tra chỉ số cuồng Say Gex (Đấu kiếm) của bản thân hoặc người khác')
           .addUserOption(opt => opt.setName('user').setDescription('Thành viên muốn kiểm tra').setRequired(false))
       ]
     });
@@ -205,132 +268,42 @@ client.on(Events.InteractionCreate, async (interaction) => {
   try {
     // 1. SLASH COMMANDS
     if (interaction.isChatInputCommand()) {
-      if (interaction.commandName === 'check-gay') {
-        const target = interaction.options.getUser('user') || interaction.user;
-        const percent = getPercentage(target.id, 'gay');
-        const progressBar = createProgressBar(percent, '🏳️‍🌈');
+      const { commandName } = interaction;
 
-        let statusText = '';
-        if (percent === 0) statusText = 'Trai thẳng như cây thước 📏';
-        else if (percent < 30) statusText = 'Có hơi chút "dẻo" nhẹ 🤫';
-        else if (percent < 70) statusText = 'Tâm hồn nhạy cảm, nghi vấn rất cao! 🏳️‍🌈';
-        else statusText = 'Gay chính hiệu 1000% không thể chối cãi! 👑💗';
+      if (['check-gay', 'check-les', 'check-beophi', 'check-wibu', 'check-haiten', 'check-saygex'].includes(commandName)) {
+        const target = interaction.options.getUser('user') || interaction.user;
+        const typeKey = commandName.replace('check-', '');
+        const percent = getPercentage(target.id, typeKey);
+
+        const configs = {
+          'check-gay': { title: '🌈 MÁY QUÉT GAY DETECTOR', emoji: '🏳️‍🌈', color: '#FF69B4' },
+          'check-les': { title: '👩‍❤️‍👩 MÁY QUÉT LES DETECTOR', emoji: '👭', color: '#FF1493' },
+          'check-beophi': { title: '🍔 MÁY QUÉT BÉO PHÌ', emoji: '🍔', color: '#FFA500' },
+          'check-wibu': { title: '🍥 MÁY QUÉT ĐỘ WIBU', emoji: '🍥', color: '#9B59B6' },
+          'check-haiten': { title: '🔞 MÁY QUÉT NGHIỆN HAITEN', emoji: '🔞', color: '#E74C3C' },
+          'check-saygex': { title: '⚔️ MÁY QUÉT SAY GEX DETECTOR', emoji: '⚔️', color: '#8E44AD' }
+        };
+
+        const cfg = configs[commandName];
+        const progressBar = createProgressBar(percent, cfg.emoji);
+        const commentText = getCheckComment(typeKey, percent);
 
         const embed = new EmbedBuilder()
-          .setTitle(`🌈 BẢNG MÁY QUÉT GAY DETECTOR`)
+          .setTitle(cfg.title)
           .setThumbnail(target.displayAvatarURL({ dynamic: true }))
-          .setColor('#FF69B4')
-          .setDescription(`Kết quả phân tích độ Gay của **${target.username}**:`)
+          .setImage(CHECK_IMAGES[typeKey])
+          .setColor(cfg.color)
+          .setDescription(`Kết quả phân tích của **${target.username}**:`)
           .addFields(
-            { name: '📊 Chỉ số Gay', value: `${progressBar}`, inline: false },
-            { name: '📝 Đánh giá', value: statusText, inline: false }
+            { name: '📊 Chỉ số phân tích', value: `${progressBar}`, inline: false },
+            { name: '💬 Đánh giá mặn mòi', value: `*${commentText}*`, inline: false }
           )
-          .setFooter({ text: 'Kết quả mang tính chất giải trí vui vẻ!' });
+          .setFooter({ text: 'Kết quả mang tính chất giải trí bựa!' });
 
         return await interaction.reply({ embeds: [embed] });
       }
 
-      if (interaction.commandName === 'check-les') {
-        const target = interaction.options.getUser('user') || interaction.user;
-        const percent = getPercentage(target.id, 'les');
-        const progressBar = createProgressBar(percent, '👭');
-
-        let statusText = '';
-        if (percent === 0) statusText = 'Gái thẳng chuẩn chỉ 🌸';
-        else if (percent < 30) statusText = 'Hơi thích ngắm gái đẹp tí thôi 🙈';
-        else if (percent < 70) statusText = 'Mê con gái hơn mê con trai rồi nhé! 💃';
-        else statusText = 'Nữ vương Bách Hợp, Les chuẩn chỉnh! 👭💖';
-
-        const embed = new EmbedBuilder()
-          .setTitle(`👩‍❤️‍👩 BẢNG MÁY QUÉT LES DETECTOR`)
-          .setThumbnail(target.displayAvatarURL({ dynamic: true }))
-          .setColor('#FF1493')
-          .setDescription(`Kết quả phân tích độ Les của **${target.username}**:`)
-          .addFields(
-            { name: '📊 Chỉ số Les', value: `${progressBar}`, inline: false },
-            { name: '📝 Đánh giá', value: statusText, inline: false }
-          )
-          .setFooter({ text: 'Kết quả mang tính chất giải trí vui vẻ!' });
-
-        return await interaction.reply({ embeds: [embed] });
-      }
-
-      if (interaction.commandName === 'check-beophi') {
-        const target = interaction.options.getUser('user') || interaction.user;
-        const percent = getPercentage(target.id, 'beophi');
-        const progressBar = createProgressBar(percent, '🍔');
-
-        let statusText = '';
-        if (percent === 0) statusText = 'Thân hình mình hạc xương mai, nhẹ như lông hồng 🏋️‍♂️';
-        else if (percent < 30) statusText = 'Dáng chuẩn như siêu mẫu, mỡ thừa 0% 💪';
-        else if (percent < 70) statusText = 'Béo mầm mạp đáng yêu, bắt đầu có nọng 🍩';
-        else statusText = 'Thùng phi di động, bước đi làm rung chuyển Trái Đất! 🍔🍕🐘';
-
-        const embed = new EmbedBuilder()
-          .setTitle(`🍔 BẢNG MÁY QUÉT BÉO PHÌ`)
-          .setThumbnail(target.displayAvatarURL({ dynamic: true }))
-          .setColor('#FFA500')
-          .setDescription(`Kết quả phân tích độ Béo Phì của **${target.username}**:`)
-          .addFields(
-            { name: '📊 Mức độ Béo Phì', value: `${progressBar}`, inline: false },
-            { name: '📝 Đánh giá', value: statusText, inline: false }
-          )
-          .setFooter({ text: 'Kết quả mang tính chất giải trí vui vẻ!' });
-
-        return await interaction.reply({ embeds: [embed] });
-      }
-
-      if (interaction.commandName === 'check-wibu') {
-        const target = interaction.options.getUser('user') || interaction.user;
-        const percent = getPercentage(target.id, 'wibu');
-        const progressBar = createProgressBar(percent, '🍥');
-
-        let statusText = '';
-        if (percent === 0) statusText = 'Người bình thường, chưa bao giờ xem Anime 🚶‍♂️';
-        else if (percent < 30) statusText = 'Wibu tập sự, mới biết xem Conan với Doraemon 🎒';
-        else if (percent < 70) statusText = 'Wibu chính hiệu, suốt ngày Yamete Kudasai! ⛩️🌸';
-        else statusText = 'Wibu chúa hạ sang! Sống cùng gối ôm Waifu 2D! 👑🍙🎎';
-
-        const embed = new EmbedBuilder()
-          .setTitle(`🍥 BẢNG MÁY QUÉT ĐỘ WIBU`)
-          .setThumbnail(target.displayAvatarURL({ dynamic: true }))
-          .setColor('#9B59B6')
-          .setDescription(`Kết quả phân tích độ Wibu của **${target.username}**:`)
-          .addFields(
-            { name: '📊 Mức độ Wibu', value: `${progressBar}`, inline: false },
-            { name: '📝 Đánh giá', value: statusText, inline: false }
-          )
-          .setFooter({ text: 'Kết quả mang tính chất giải trí vui vẻ!' });
-
-        return await interaction.reply({ embeds: [embed] });
-      }
-
-      if (interaction.commandName === 'check-haiten') {
-        const target = interaction.options.getUser('user') || interaction.user;
-        const percent = getPercentage(target.id, 'haiten');
-        const progressBar = createProgressBar(percent, '🔞');
-
-        let statusText = '';
-        if (percent === 0) statusText = 'Tâm hồn trong sáng như tờ giấy trắng 👼🏻';
-        else if (percent < 30) statusText = 'Thỉnh thoảng có tò mò chút xíu 🙈';
-        else if (percent < 70) statusText = 'Đầu óc đen tối, ng ngùng nhưng khoái xem 🌚';
-        else statusText = 'Bậc thầy 6 chữ số, nguồn tài nguyên vô tận! 🦉🔞💥';
-
-        const embed = new EmbedBuilder()
-          .setTitle(`🔞 BẢNG MÁY QUÉT NGHIỆN HAITEN`)
-          .setThumbnail(target.displayAvatarURL({ dynamic: true }))
-          .setColor('#E74C3C')
-          .setDescription(`Kết quả phân tích chỉ số nghiện HaiTen của **${target.username}**:`)
-          .addFields(
-            { name: '📊 Chỉ số Nghiện', value: `${progressBar}`, inline: false },
-            { name: '📝 Đánh giá', value: statusText, inline: false }
-          )
-          .setFooter({ text: 'Kết quả mang tính chất giải trí vui vẻ!' });
-
-        return await interaction.reply({ embeds: [embed] });
-      }
-
-      if (interaction.commandName === 'tao-phien') {
+      if (commandName === 'tao-phien') {
         const title = interaction.options.getString('ten');
         const hours = interaction.options.getNumber('gio');
         const channel = interaction.options.getChannel('kenh') || interaction.channel;
