@@ -34,7 +34,15 @@ const commands = [
   new SlashCommandBuilder().setName('check-haiten').setDescription('Check độ nghiện Hentai').addUserOption(opt => opt.setName('user').setDescription('Người muốn check'))
 ].map(cmd => cmd.toJSON());
 
-// Bảng câu phán tục tĩu / mỏ hỗn theo %
+// Ảnh minh họa theo từng loại check
+const images = {
+  'check-gay': 'https://media.giphy.com/media/26gspjl5bxzhxoBWw/giphy.gif',
+  'check-beophi': 'https://media.giphy.com/media/dJe8wgptDLAv9Re78T/giphy.gif',
+  'check-wibu': 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif',
+  'check-haiten': 'https://media.giphy.com/media/6vE3Y7KE6ss8M/giphy.gif'
+};
+
+// Bảng nhận xét mỏ hỗn theo %
 function getComment(type, rate) {
   const comments = {
     'check-gay': [
@@ -67,7 +75,7 @@ function getComment(type, rate) {
   for (const item of list) {
     if (rate <= item.max) return item.text;
   }
-  return 'Cực phẩm mỏ hỗn!';
+  return 'Cực phẩm!';
 }
 
 client.once('ready', async () => {
@@ -121,7 +129,9 @@ client.on('interactionCreate', async interaction => {
 
       const embed = new EmbedBuilder()
         .setTitle(titles[commandName])
-        .setDescription(`Kết quả phân tích cho ${target}:\nTỉ lệ: **${rate}%**\n\n🗣️ **AI nhận xét:** *${comment}*`)
+        .setDescription(`Đối tượng: ${target}\nTỉ lệ: **${rate}%**\n\n💬 *${comment}*`)
+        .setThumbnail(target.displayAvatarURL({ dynamic: true }))
+        .setImage(images[commandName])
         .setColor(rate > 50 ? 0xff0055 : 0x00ff88);
 
       return interaction.reply({ embeds: [embed] });
