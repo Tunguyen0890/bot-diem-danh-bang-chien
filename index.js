@@ -10,7 +10,8 @@ const {
   ButtonStyle, 
   ModalBuilder, 
   TextInputBuilder, 
-  TextInputStyle 
+  TextInputStyle,
+  PermissionFlagsBits
 } = require('discord.js');
 const fs = require('fs');
 
@@ -25,16 +26,32 @@ const client = new Client({
 const DATA_FILE = './diemdanh_data.json';
 if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, JSON.stringify({}));
 
-// Danh sách Slash Commands
+// Danh sách các Môn Phái
+const FACTIONS = [
+  { id: 'cuulinh', name: 'Cửu Linh', emoji: '🔮' },
+  { id: 'thantung', name: 'Thần Tướng', emoji: '⚡' },
+  { id: 'thiety', name: 'Thiết Y', emoji: '🛡️' },
+  { id: 'toaimong', name: 'Toái Mộng', emoji: '🗡️' },
+  { id: 'longngam', name: 'Long Ngâm', emoji: '🐉' },
+  { id: 'tovan', name: 'Tố Vấn', emoji: '🌸' },
+  { id: 'huyetha', name: 'Huyết Hà', emoji: '🩸' }
+];
+
+// Đăng ký Slash Commands
 const commands = [
-  new SlashCommandBuilder().setName('tao-phien').setDescription('Tạo phiên điểm danh Bang chiến mới'),
-  new SlashCommandBuilder().setName('check-gay').setDescription('Check độ Gay').addUserOption(opt => opt.setName('user').setDescription('Người muốn check')),
-  new SlashCommandBuilder().setName('check-beophi').setDescription('Check độ Béo Phì').addUserOption(opt => opt.setName('user').setDescription('Người muốn check')),
-  new SlashCommandBuilder().setName('check-wibu').setDescription('Check độ Wibu').addUserOption(opt => opt.setName('user').setDescription('Người muốn check')),
-  new SlashCommandBuilder().setName('check-haiten').setDescription('Check độ nghiện Hentai').addUserOption(opt => opt.setName('user').setDescription('Người muốn check'))
+  new SlashCommandBuilder()
+    .setName('tao-phien')
+    .setDescription('Tạo phiên điểm danh Bang chiến mới')
+    .addStringOption(opt => opt.setName('ten').setDescription('Tên phiên điểm danh (ví dụ: Bang Chiến)').setRequired(true))
+    .addIntegerOption(opt => opt.setName('gio').setDescription('Thời gian mở (tính theo giờ)').setRequired(true))
+    .addChannelOption(opt => opt.setName('kenh').setDescription('Kênh gửi bảng điểm danh').setRequired(true)),
+
+  new SlashCommandBuilder().setName('check-gay').setDescription('Check độ Gay').addUserOption(o => o.setName('user').setDescription('Người muốn check')),
+  new SlashCommandBuilder().setName('check-beophi').setDescription('Check độ Béo Phì').addUserOption(o => o.setName('user').setDescription('Người muốn check')),
+  new SlashCommandBuilder().setName('check-wibu').setDescription('Check độ Wibu').addUserOption(o => o.setName('user').setDescription('Người muốn check')),
+  new SlashCommandBuilder().setName('check-haiten').setDescription('Check độ nghiện Hentai').addUserOption(o => o.setName('user').setDescription('Người muốn check'))
 ].map(cmd => cmd.toJSON());
 
-// Ảnh minh họa theo từng loại check
 const images = {
   'check-gay': 'https://media.giphy.com/media/26gspjl5bxzhxoBWw/giphy.gif',
   'check-beophi': 'https://media.giphy.com/media/dJe8wgptDLAv9Re78T/giphy.gif',
@@ -42,7 +59,6 @@ const images = {
   'check-haiten': 'https://media.giphy.com/media/6vE3Y7KE6ss8M/giphy.gif'
 };
 
-// Bảng nhận xét mỏ hỗn theo %
 function getComment(type, rate) {
   const comments = {
     'check-gay': [
@@ -71,7 +87,7 @@ function getComment(type, rate) {
     ]
   };
 
-  const list = comments[type];
+  const list = comments[type] || [];
   for (const item of list) {
     if (rate <= item.max) return item.text;
   }
@@ -79,40 +95,49 @@ function getComment(type, rate) {
 }
 
 client.once('ready', async () => {
-  console.log(`✅ Bot đã đăng nhập thành công: ${client.user.tag}`);
+  console.log(`✅ Bot đã kết nối thành công: ${client.user.tag}`);
   const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
   try {
     await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
-    console.log('⚡ Đã cập nhật xong các Slash Commands!');
+    console.log('⚡ Đã đăng ký hệ thống Slash Commands!');
   } catch (err) {
-    console.error('Lỗi đăng ký lệnh:', err);
+    console.error('Lỗi khi cài đặt lệnh:', err);
   }
 });
 
 client.on('interactionCreate', async interaction => {
+  // 1. XỬ LÝ SLASH COMMANDS
   if (interaction.isChatInputCommand()) {
     const { commandName } = interaction;
 
     if (commandName === 'tao-phien') {
-      const data = JSON.parse(fs.readFileSync(DATA_FILE));
-      data[interaction.channelId] = { co_mat: [], xin_vang: [] };
-      fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+      const ten = interaction.options.getString('ten');
+      const gio = interaction.options.getInteger('gio');
+      const kenh = interaction.options.getChannel('kenh');
 
-      const embed = new EmbedBuilder()
-        .setTitle('⚔️ ĐIỂM DANH BANG CHIẾN')
-        .setDescription('Vui lòng chọn nút bên dưới để điểm danh trạng thái tham gia của bạn!')
-        .setColor(0x38bdf8)
-        .addFields(
-          { name: '✅ Có mặt (0)', value: 'Chưa có ai', inline: true },
-          { name: '❌ Xin vắng (0)', value: 'Chưa có ai', inline: true }
-        );
+      await interaction.reply({ content: `⏳ Đang tạo phiên điểm danh...`, ephemeral: true });
 
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('dd_comat').setLabel('Có mặt').setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId('dd_xinvang').setLabel('Xin vắng').setStyle(ButtonStyle.Danger)
-      );
+      const sessionData = {
+        title: ten,
+        duration: gio,
+        status: 'Dang mo diem danh',
+        createdAt: new Date().toISOString(),
+        users: {}, // { userId: { factionId, inGame, reason } }
+        baoBan: {}  // { userId: { inGame, reason } }
+      };
 
-      return interaction.reply({ embeds: [embed], components: [row] });
+      const embed = buildMainEmbed(sessionData);
+      const components = buildMainComponents();
+
+      const msg = await kenh.send({ embeds: [embed], components: components });
+
+      const db = JSON.parse(fs.readFileSync(DATA_FILE));
+      db[msg.id] = sessionData;
+      fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+
+      return interaction.editReply({ 
+        content: `✅ Đã tạo phiên điểm danh thành công tại <#${kenh.id}>!` 
+      });
     }
 
     if (['check-gay', 'check-beophi', 'check-wibu', 'check-haiten'].includes(commandName)) {
@@ -138,31 +163,132 @@ client.on('interactionCreate', async interaction => {
     }
   }
 
+  // 2. XỬ LÝ NÚT BẤM (BUTTONS)
   if (interaction.isButton()) {
-    const data = JSON.parse(fs.readFileSync(DATA_FILE));
-    const channelData = data[interaction.channelId] || { co_mat: [], xin_vang: [] };
+    const msgId = interaction.message.id;
+    const db = JSON.parse(fs.readFileSync(DATA_FILE));
+    const session = db[msgId];
 
-    if (interaction.customId === 'dd_comat') {
-      channelData.co_mat = channelData.co_mat.filter(u => u.id !== interaction.user.id);
-      channelData.xin_vang = channelData.xin_vang.filter(u => u.id !== interaction.user.id);
-      channelData.co_mat.push({ id: interaction.user.id, name: interaction.user.username });
-      
-      data[interaction.channelId] = channelData;
-      fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-
-      await updateEmbed(interaction, channelData);
-      return interaction.reply({ content: '✅ Bạn đã điểm danh **Có mặt**!', ephemeral: true });
+    if (!session && !interaction.customId.startsWith('admin_')) {
+      return interaction.reply({ content: '❌ Phiên điểm danh này không tồn tại hoặc đã bị xóa.', ephemeral: true });
     }
 
-    if (interaction.customId === 'dd_xinvang') {
-      const modal = new ModalBuilder()
-        .setCustomId('modal_lydo')
-        .setTitle('Lý do xin vắng');
+    // Chọn Môn Phái
+    if (interaction.customId.startsWith('faction_')) {
+      const factionId = interaction.customId.replace('faction_', '');
       
+      const modal = new ModalBuilder()
+        .setCustomId(`modal_register_${factionId}`)
+        .setTitle('Điểm Danh');
+
       const input = new TextInputBuilder()
-        .setCustomId('input_lydo')
-        .setLabel('Ghi rõ lý do xin vắng')
+        .setCustomId('ingame')
+        .setLabel('Tên nhân vật trong game (In-game)')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      modal.addComponents(new ActionRowBuilder().addComponents(input));
+      return interaction.showModal(modal);
+    }
+
+    // Hủy Đăng Ký
+    if (interaction.customId === 'btn_huydk') {
+      delete session.users[interaction.user.id];
+      fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+
+      await interaction.message.edit({ embeds: [buildMainEmbed(session)] });
+      return interaction.reply({ content: '🗑️ Đã xóa thông tin điểm danh của bạn!', ephemeral: true });
+    }
+
+    // Báo Bận
+    if (interaction.customId === 'btn_baoban') {
+      const modal = new ModalBuilder()
+        .setCustomId('modal_baoban')
+        .setTitle('Báo Bận');
+
+      const inputIngame = new TextInputBuilder()
+        .setCustomId('ingame')
+        .setLabel('Tên In-game')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      const inputReason = new TextInputBuilder()
+        .setCustomId('reason')
+        .setLabel('Lý do bận')
         .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true);
+
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(inputIngame),
+        new ActionRowBuilder().addComponents(inputReason)
+      );
+      return interaction.showModal(modal);
+    }
+
+    // Hủy Bận
+    if (interaction.customId === 'btn_huyban') {
+      delete session.baoBan[interaction.user.id];
+      fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+
+      await interaction.message.edit({ embeds: [buildMainEmbed(session)] });
+      return interaction.reply({ content: '🗑️ Đã xóa thông tin báo bận!', ephemeral: true });
+    }
+
+    // Mở Bảng Quản Lý Admin
+    if (interaction.customId === 'btn_quanly') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages)) {
+        return interaction.reply({ content: '❌ Bạn không có quyền quản lý phiên điểm danh này!', ephemeral: true });
+      }
+
+      const adminRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`admin_dongphien_${msgId}`).setLabel('Đóng Phiên').setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId(`admin_doiten_${msgId}`).setLabel('Đổi Tên').setStyle(ButtonStyle.Secondary)
+      );
+
+      return interaction.reply({
+        content: '⚙️ **Bảng điều khiển admin:**',
+        components: [adminRow],
+        ephemeral: true
+      });
+    }
+
+    // Admin: Đóng Phiên
+    if (interaction.customId.startsWith('admin_dongphien_')) {
+      const targetMsgId = interaction.customId.replace('admin_dongphien_', '');
+      const targetSession = db[targetMsgId];
+
+      if (!targetSession) return interaction.reply({ content: '❌ Không tìm thấy phiên!', ephemeral: true });
+
+      targetSession.status = 'Da dong';
+      fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+
+      try {
+        const channel = interaction.channel;
+        const targetMsg = await channel.messages.fetch(targetMsgId);
+        await targetMsg.edit({ embeds: [buildMainEmbed(targetSession)], components: [] });
+      } catch (e) {}
+
+      // Tạo Embed Tổng Kết
+      const summaryEmbed = buildSummaryEmbed(targetSession);
+
+      await interaction.reply({ content: '🔒 Phiên điểm danh đã được ĐÓNG bởi Quản Trị Viên!', ephemeral: true });
+      return interaction.channel.send({
+        content: '📊 **TỔNG KẾT ĐIỂM DANH:** ' + targetSession.title,
+        embeds: [summaryEmbed]
+      });
+    }
+
+    // Admin: Đổi Tên
+    if (interaction.customId.startsWith('admin_doiten_')) {
+      const targetMsgId = interaction.customId.replace('admin_doiten_', '');
+      const modal = new ModalBuilder()
+        .setCustomId(`modal_doiten_${targetMsgId}`)
+        .setTitle('Đổi Tên Phiên');
+
+      const input = new TextInputBuilder()
+        .setCustomId('new_title')
+        .setLabel('Tên phiên mới')
+        .setStyle(TextInputStyle.Short)
         .setRequired(true);
 
       modal.addComponents(new ActionRowBuilder().addComponents(input));
@@ -170,37 +296,148 @@ client.on('interactionCreate', async interaction => {
     }
   }
 
-  if (interaction.isModalSubmit() && interaction.customId === 'modal_lydo') {
-    const lydo = interaction.fields.getTextInputValue('input_lydo');
-    const data = JSON.parse(fs.readFileSync(DATA_FILE));
-    const channelData = data[interaction.channelId] || { co_mat: [], xin_vang: [] };
+  // 3. XỬ LÝ FORM ĐIỀN (MODALS)
+  if (interaction.isModalSubmit()) {
+    const db = JSON.parse(fs.readFileSync(DATA_FILE));
+    const msgId = interaction.message?.id;
 
-    channelData.co_mat = channelData.co_mat.filter(u => u.id !== interaction.user.id);
-    channelData.xin_vang = channelData.xin_vang.filter(u => u.id !== interaction.user.id);
-    channelData.xin_vang.push({ id: interaction.user.id, name: interaction.user.username, lydo });
+    // Đăng ký Môn phái
+    if (interaction.customId.startsWith('modal_register_')) {
+      const factionId = interaction.customId.replace('modal_register_', '');
+      const ingame = interaction.fields.getTextInputValue('ingame');
+      const session = db[msgId];
 
-    data[interaction.channelId] = channelData;
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+      delete session.baoBan[interaction.user.id]; // Xóa khỏi danh sách báo bận nếu có
+      session.users[interaction.user.id] = { factionId, inGame: ingame };
+      fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
 
-    await updateEmbed(interaction, channelData);
-    return interaction.reply({ content: '❌ Đã ghi nhận lý do vắng của bạn!', ephemeral: true });
+      await interaction.message.edit({ embeds: [buildMainEmbed(session)] });
+      return interaction.reply({ content: '📝 Đã ghi nhận điểm danh!', ephemeral: true });
+    }
+
+    // Báo Bận
+    if (interaction.customId === 'modal_baoban') {
+      const ingame = interaction.fields.getTextInputValue('ingame');
+      const reason = interaction.fields.getTextInputValue('reason');
+      const session = db[msgId];
+
+      delete session.users[interaction.user.id]; // Xóa khỏi danh sách tham gia
+      session.baoBan[interaction.user.id] = { inGame: ingame, reason };
+      fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+
+      await interaction.message.edit({ embeds: [buildMainEmbed(session)] });
+      return interaction.reply({ content: '📝 Đã ghi nhận báo bận!', ephemeral: true });
+    }
+
+    // Admin Đổi Tên
+    if (interaction.customId.startsWith('modal_doiten_')) {
+      const targetMsgId = interaction.customId.replace('modal_doiten_', '');
+      const newTitle = interaction.fields.getTextInputValue('new_title');
+      const session = db[targetMsgId];
+
+      session.title = newTitle;
+      fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+
+      try {
+        const targetMsg = await interaction.channel.messages.fetch(targetMsgId);
+        await targetMsg.edit({ embeds: [buildMainEmbed(session)] });
+      } catch (e) {}
+
+      return interaction.reply({ content: '✅ Đã cập nhật tên phiên điểm danh!', ephemeral: true });
+    }
   }
 });
 
-async function updateEmbed(interaction, channelData) {
-  const coMatText = channelData.co_mat.length > 0 ? channelData.co_mat.map(u => `<@${u.id}>`).join('\n') : 'Chưa có ai';
-  const xinVangText = channelData.xin_vang.length > 0 ? channelData.xin_vang.map(u => `<@${u.id}> (${u.lydo})`).join('\n') : 'Chưa có ai';
+// BUILD MÀN HÌNH CHÍNH
+function buildMainEmbed(session) {
+  const isClosed = session.status === 'Da dong';
+  const totalCount = Object.keys(session.users).length;
+  const timeStr = new Date().toLocaleTimeString('vi-VN', { hour12: false });
 
-  const embed = new EmbedBuilder()
-    .setTitle('⚔️ ĐIỂM DANH BANG CHIẾN')
-    .setDescription('Vui lòng chọn nút bên dưới để điểm danh trạng thái tham gia của bạn!')
-    .setColor(0x38bdf8)
-    .addFields(
-      { name: `✅ Có mặt (${channelData.co_mat.length})`, value: coMatText, inline: true },
-      { name: `❌ Xin vắng (${channelData.xin_vang.length})`, value: xinVangText, inline: true }
-    );
+  let desc = `**Trạng thái**\n${isClosed ? '🔴 Đã đóng' : '🟢 Đang mở điểm danh'}\n\n`;
+  desc += `**Thời hạn**\n${session.duration} ngày tới\n\n`;
+  desc += `**Tổng số tham gia: ${totalCount} người**\n\n`;
 
-  await interaction.message.edit({ embeds: [embed] });
+  // Báo Bận
+  const baoBanKeys = Object.keys(session.baoBan);
+  if (baoBanKeys.length > 0) {
+    desc += `⚠️ **Báo bận (${baoBanKeys.length})**\n`;
+    baoBanKeys.forEach((uid, index) => {
+      const item = session.baoBan[uid];
+      desc += `${index + 1}. <@${uid}> | ${item.inGame} (${item.reason})\n`;
+    });
+    desc += `\n`;
+  }
+
+  // Danh sách môn phái
+  FACTIONS.forEach(f => {
+    const members = Object.entries(session.users).filter(([_, u]) => u.factionId === f.id);
+    desc += `${f.emoji} **${f.name} (${members.length})**\n`;
+    if (members.length === 0) {
+      desc += `Trống\n`;
+    } else {
+      members.forEach(([uid, u], index) => {
+        desc += `${index + 1}. <@${uid}>. (${u.inGame})\n`;
+      });
+    }
+    desc += `\n`;
+  });
+
+  desc += `*Cập nhật lúc: ${timeStr}*`;
+
+  return new EmbedBuilder()
+    .setTitle(`⚔️ ${session.title}`)
+    .setDescription(desc)
+    .setColor(isClosed ? 0xef4444 : 0x38bdf8);
+}
+
+// BUILD COMPONENT BẢNG ĐIỂM DANH
+function buildMainComponents() {
+  const row1 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('faction_cuulinh').setLabel('Cửu Linh').setEmoji('🔮').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('faction_thantung').setLabel('Thần Tướng').setEmoji('⚡').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('faction_thiety').setLabel('Thiết Y').setEmoji('🛡️').setStyle(ButtonStyle.Primary)
+  );
+
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('faction_toaimong').setLabel('Toái Mộng').setEmoji('🗡️').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('faction_longngam').setLabel('Long Ngâm').setEmoji('🐉').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('faction_tovan').setLabel('Tố Vấn').setEmoji('🌸').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('faction_huyetha').setLabel('Huyết Hà').setEmoji('🩸').setStyle(ButtonStyle.Primary)
+  );
+
+  const row3 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('btn_huydk').setLabel('Hủy ĐK').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId('btn_baoban').setLabel('Báo Bận').setStyle(ButtonStyle.Warning),
+    new ButtonBuilder().setCustomId('btn_huyban').setLabel('Hủy Bận').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('btn_quanly').setLabel('Quản Lý').setStyle(ButtonStyle.Secondary)
+  );
+
+  return [row1, row2, row3];
+}
+
+// BUILD MÀN HÌNH TỔNG KẾT
+function buildSummaryEmbed(session) {
+  const totalUsers = Object.keys(session.users).length;
+  const totalBaoBan = Object.keys(session.baoBan).length;
+  const timeStr = new Date().toLocaleTimeString('vi-VN', { hour12: false });
+
+  let desc = `📌 *Phiên điểm danh đã chính thức đóng. Thống kê chi tiết như sau:*\n\n`;
+  desc += `👤 **Tổng người tham gia**\n${totalUsers} thành viên\n\n`;
+  desc += `⚠️ **Tổng số báo bận**\n${totalBaoBan} người\n\n`;
+  desc += `⚔️ **Thống kê theo môn phái**\n`;
+
+  FACTIONS.forEach(f => {
+    const count = Object.values(session.users).filter(u => u.factionId === f.id).length;
+    desc += `${f.emoji} **${f.name}:** ${count} người\n`;
+  });
+
+  desc += `\n*Tổng kết lúc: ${timeStr}*`;
+
+  return new EmbedBuilder()
+    .setTitle(`📊 TỔNG KẾT ĐIỂM DANH: ${session.title}`)
+    .setDescription(desc)
+    .setColor(0x22c55e);
 }
 
 client.login(process.env.TOKEN);
