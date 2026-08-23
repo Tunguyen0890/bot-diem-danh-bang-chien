@@ -21,14 +21,15 @@ const TOKEN = process.env.TOKEN || 'YOUR_BOT_TOKEN_HERE';
 
 const BANNER_IMAGE = 'https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Z2eDFwZXRyNWJ1aGhybnMwbWN5OHAwMmdtbHJvMHFvMm5mMnF0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/L2XhHcmM55533fYnmA/giphy.gif';
 
+// 💡 Điền ID Emoji Discord của bạn vào đây (Ví dụ: '123456789012345678')
 const CLASSES = [
-  { id: 'culinh', name: 'Cửu Linh', emoji: '🔮' },
-  { id: 'thantuong', name: 'Thần Tướng', emoji: '⚡' },
-  { id: 'thiety', name: 'Thiết Y', emoji: '🛡️' },
-  { id: 'toaimong', name: 'Toái Mộng', emoji: '🗡️' },
-  { id: 'longngam', name: 'Long Ngâm', emoji: '🐉' },
-  { id: 'tovan', name: 'Tố Vấn', emoji: '🌸' },
-  { id: 'huyetha', name: 'Huyết Hà', emoji: '🩸' }
+  { id: 'culinh', name: 'Cửu Linh', emoji: '1540995232848420926' },
+  { id: 'thantuong', name: 'Thần Tướng', emoji: '1540995230877097984' },
+  { id: 'thiety', name: 'Thiết Y', emoji: '1540995240691896431' },
+  { id: 'toaimong', name: 'Toái Mộng', emoji: '1540995237084798986' },
+  { id: 'longngam', name: 'Long Ngâm', emoji: '1540995228448723025' },
+  { id: 'tovan', name: 'Tố Vấn', emoji: '1540995234840846437' },
+  { id: 'huyetha', name: 'Huyết Hà', emoji: '1540995238909321327' }
 ];
 
 // GIF Anime Minh Họa cho từng lệnh Check
@@ -53,6 +54,12 @@ const activeSessions = new Map();
 
 process.on('unhandledRejection', (error) => console.error('Hệ thống bắt Unhandled Rejection:', error));
 process.on('uncaughtException', (error) => console.error('Hệ thống bắt Uncaught Exception:', error));
+
+// Hàm hiển thị Emoji (ID hoặc Unicode) trên Embed
+function getEmojiString(emoji) {
+  if (!emoji) return '⚔️';
+  return /^\d+$/.test(emoji) ? `<:custom:${emoji}>` : emoji;
+}
 
 // Hàm tính % cố định dựa trên User ID
 function getPercentage(userId, type) {
@@ -141,7 +148,7 @@ function buildEmbed(session) {
   CLASSES.forEach(c => {
     const list = session.members?.[c.id] || [];
     const text = list.length > 0 ? list.map((m, i) => `${i + 1}. <@${m.userId}> (${m.name})`).join('\n') : '*Chưa có ai*';
-    embed.addFields({ name: `${c.emoji} ${c.name} (${list.length})`, value: text, inline: true });
+    embed.addFields({ name: `${getEmojiString(c.emoji)} ${c.name} (${list.length})`, value: text, inline: true });
   });
 
   embed.setFooter({ text: `Cập nhật lúc: ${new Date().toLocaleTimeString('vi-VN')}` });
@@ -164,7 +171,7 @@ function buildSummaryEmbed(session) {
 
   let classSummaryText = CLASSES.map(c => {
     const count = session.members?.[c.id]?.length || 0;
-    return `${c.emoji} **${c.name}**: \`${count}\` đệ tử`;
+    return `${getEmojiString(c.emoji)} **${c.name}**: \`${count}\` đệ tử`;
   }).join('\n');
 
   embed.addFields({ name: '⚔️ Phân chia lực lượng môn phái', value: classSummaryText, inline: false });
@@ -218,9 +225,8 @@ client.on(Events.ClientReady, async () => {
   console.log(`🤖 Bot đã khởi động với tên: ${client.user.tag}`);
   const rest = new REST({ version: '10' }).setToken(TOKEN);
 
-  // Cấu hình hỗ trợ User App
-  const integrationTypes = [0, 1]; // 0: Guild Install, 1: User Install
-  const contexts = [0, 1, 2];         // 0: Guild, 1: Bot DM, 2: External Server/DM (Server không có Bot)
+  const integrationTypes = [0, 1];
+  const contexts = [0, 1, 2];
 
   try {
     await rest.put(Routes.applicationCommands(client.application.id), {
@@ -275,7 +281,7 @@ client.on(Events.ClientReady, async () => {
           .setContexts(contexts)
       ]
     });
-    console.log('✅ Đã cập nhật xong hệ thống Slash Command (Tích hợp User App thành công)!');
+    console.log('✅ Đã cập nhật xong hệ thống Slash Command!');
   } catch (e) {
     console.error('Lỗi đăng ký Slash Command:', e);
   }
@@ -374,10 +380,20 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       if (interaction.isButton() && interaction.customId === 'a_admin') {
         if (!session) return await interaction.reply({ content: '⚠️ Dữ liệu phiên không tồn tại trên bộ nhớ tạm!', ephemeral: true });
+
+        // PHÂN QUYỀN CHẶT CHẼ
         const isOwner = session.creatorId === interaction.user.id;
+        const isServerOwner = interaction.guild?.ownerId === interaction.user.id;
         const isAdmin = interaction.memberPermissions?.has(PermissionsBitField.Flags.Administrator);
-        if (!isOwner && !isAdmin) {
-          return await interaction.reply({ content: '⚠️ Bạn không có quyền quản lý!', ephemeral: true });
+        const hasManagerRole = interaction.member?.roles?.cache.some(r => 
+          ['điều phối', 'quản lý', 'quản lí', 'dieu phoi', 'quan ly'].includes(r.name.toLowerCase())
+        );
+
+        if (!isOwner && !isServerOwner && !isAdmin && !hasManagerRole) {
+          return await interaction.reply({ 
+            content: '🚫 **Chỉ Chủ Server, Người Tạo Phiên, Điều Phối hoặc Quản Lý mới có thể mở menu này!**', 
+            ephemeral: true 
+          });
         }
 
         const adminRow = new ActionRowBuilder().addComponents(
