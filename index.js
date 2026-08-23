@@ -11,9 +11,11 @@ const {
   ModalBuilder, 
   TextInputBuilder, 
   TextInputStyle,
-  PermissionFlagsBits
+  PermissionFlagsBits,
+  ChannelType
 } = require('discord.js');
 const fs = require('fs');
+const path = require('path');
 
 const client = new Client({
   intents: [
@@ -23,8 +25,30 @@ const client = new Client({
   ]
 });
 
-const DATA_FILE = './diemdanh_data.json';
-if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, JSON.stringify({}));
+const DATA_FILE = path.join(__dirname, 'diemdanh_data.json');
+
+// Khởi tạo file data an toàn
+function loadData() {
+  try {
+    if (!fs.existsSync(DATA_FILE)) {
+      fs.writeFileSync(DATA_FILE, JSON.stringify({}), 'utf8');
+      return {};
+    }
+    const data = fs.readFileSync(DATA_FILE, 'utf8');
+    return data ? JSON.parse(data) : {};
+  } catch (err) {
+    console.error('Lỗi đọc file data:', err);
+    return {};
+  }
+}
+
+function saveData(data) {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Lỗi ghi file data:', err);
+  }
+}
 
 // Danh sách Môn Phái
 const FACTIONS = [
@@ -44,7 +68,12 @@ const commands = [
     .setDescription('Tạo phiên điểm danh Bang chiến mới')
     .addStringOption(opt => opt.setName('ten').setDescription('Tên phiên điểm danh').setRequired(true))
     .addIntegerOption(opt => opt.setName('gio').setDescription('Thời gian mở (tính theo giờ)').setRequired(true))
-    .addChannelOption(opt => opt.setName('kenh').setDescription('Kênh gửi bảng điểm danh').setRequired(true)),
+    .addChannelOption(opt => 
+      opt.setName('kenh')
+         .setDescription('Kênh gửi bảng điểm danh')
+         .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
+         .setRequired(true)
+    ),
 
   new SlashCommandBuilder().setName('check-gay').setDescription('Check độ Gay').addUserOption(o => o.setName('user').setDescription('Người muốn check')),
   new SlashCommandBuilder().setName('check-beophi').setDescription('Check độ Béo Phì').addUserOption(o => o.setName('user').setDescription('Người muốn check')),
@@ -116,6 +145,17 @@ client.on('interactionCreate', async interaction => {
         const gio = interaction.options.getInteger('gio');
         const kenh = interaction.options.getChannel('kenh');
 
+        // Kiểm tra quyền của Bot ở kênh mục tiêu
+        const botMember = await interaction.guild.members.fetchMe();
+        const permissions = kenh.permissionsFor(botMember);
+
+        if (!permissions.has(PermissionFlagsBits.SendMessages) || !permissions.has(PermissionFlagsBits.EmbedLinks)) {
+          return await interaction.reply({
+            content: `❌ Bot không có quyền **Gửi tin nhắn** hoặc **Nhúng liên kết (Embed Links)** trong kênh <#${kenh.id}>. Vui lòng cấp quyền cho Bot rồi thử lại!`,
+            ephemeral: true
+          });
+        }
+
         const sessionData = {
           title: ten,
           duration: gio,
@@ -128,23 +168,26 @@ client.on('interactionCreate', async interaction => {
         const embed = buildMainEmbed(sessionData);
         const components = buildMainComponents();
 
-        // Gửi bảng điểm danh vào kênh được chọn
+        // Gửi bảng điểm danh
         const msg = await kenh.send({ embeds: [embed], components: components });
 
         // Lưu dữ liệu
-        const db = JSON.parse(fs.readFileSync(DATA_FILE));
+        const db = loadData();
         db[msg.id] = sessionData;
-        fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+        saveData(db);
 
-        // Phản hồi cho người gọi lệnh (Ẩn chỉ mình thấy)
         return await interaction.reply({ 
           content: `✅ Đã tạo phiên điểm danh thành công tại kênh <#${kenh.id}>!`, 
           ephemeral: true 
         });
+
       } catch (error) {
-        console.error('Lỗi khi tạo phiên:', error);
-        if (!interaction.replied) {
-          return await interaction.reply({ content: '❌ Có lỗi xảy ra khi tạo phiên!', ephemeral: true });
+        console.error('Lỗi chi tiết khi tạo phiên:', error);
+        if (!interaction.replied && !interaction.deferred) {
+          return await interaction.reply({ 
+            content: `❌ Lỗi khi tạo phiên: \`${error.message}\``, 
+            ephemeral: true 
+          });
         }
       }
     }
@@ -175,7 +218,7 @@ client.on('interactionCreate', async interaction => {
   // 2. XỬ LÝ BUTTONS
   if (interaction.isButton()) {
     const msgId = interaction.message.id;
-    const db = JSON.parse(fs.readFileSync(DATA_FILE));
+    const db = loadData();
     const session = db[msgId];
 
     if (!session && !interaction.customId.startsWith('admin_')) {
@@ -203,7 +246,7 @@ client.on('interactionCreate', async interaction => {
     // Hủy Đăng Ký
     if (interaction.customId === 'btn_huydk') {
       delete session.users[interaction.user.id];
-      fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+      saveData(db);
 
       await interaction.message.edit({ embeds: [buildMainEmbed(session)] });
       return interaction.reply({ content: '🗑️ Đã xóa thông tin điểm danh của bạn!', ephemeral: true });
@@ -237,7 +280,7 @@ client.on('interactionCreate', async interaction => {
     // Hủy Bận
     if (interaction.customId === 'btn_huyban') {
       delete session.baoBan[interaction.user.id];
-      fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+      saveData(db);
 
       await interaction.message.edit({ embeds: [buildMainEmbed(session)] });
       return interaction.reply({ content: '🗑️ Đã xóa thông tin báo bận!', ephemeral: true });
@@ -269,7 +312,7 @@ client.on('interactionCreate', async interaction => {
       if (!targetSession) return interaction.reply({ content: '❌ Không tìm thấy phiên!', ephemeral: true });
 
       targetSession.status = 'Da dong';
-      fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+      saveData(db);
 
       try {
         const channel = interaction.channel;
@@ -306,7 +349,7 @@ client.on('interactionCreate', async interaction => {
 
   // 3. XỬ LÝ MODALS
   if (interaction.isModalSubmit()) {
-    const db = JSON.parse(fs.readFileSync(DATA_FILE));
+    const db = loadData();
 
     // Đăng ký Môn phái
     if (interaction.customId.startsWith('modal_register_')) {
@@ -315,12 +358,14 @@ client.on('interactionCreate', async interaction => {
       const msgId = interaction.message.id;
       const session = db[msgId];
 
-      delete session.baoBan[interaction.user.id];
-      session.users[interaction.user.id] = { factionId, inGame: ingame };
-      fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+      if (session) {
+        delete session.baoBan[interaction.user.id];
+        session.users[interaction.user.id] = { factionId, inGame: ingame };
+        saveData(db);
 
-      await interaction.message.edit({ embeds: [buildMainEmbed(session)] });
-      return interaction.reply({ content: '📝 Đã ghi nhận điểm danh!', ephemeral: true });
+        await interaction.message.edit({ embeds: [buildMainEmbed(session)] });
+        return interaction.reply({ content: '📝 Đã ghi nhận điểm danh!', ephemeral: true });
+      }
     }
 
     // Báo Bận
@@ -330,12 +375,14 @@ client.on('interactionCreate', async interaction => {
       const msgId = interaction.message.id;
       const session = db[msgId];
 
-      delete session.users[interaction.user.id];
-      session.baoBan[interaction.user.id] = { inGame: ingame, reason };
-      fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+      if (session) {
+        delete session.users[interaction.user.id];
+        session.baoBan[interaction.user.id] = { inGame: ingame, reason };
+        saveData(db);
 
-      await interaction.message.edit({ embeds: [buildMainEmbed(session)] });
-      return interaction.reply({ content: '📝 Đã ghi nhận báo bận!', ephemeral: true });
+        await interaction.message.edit({ embeds: [buildMainEmbed(session)] });
+        return interaction.reply({ content: '📝 Đã ghi nhận báo bận!', ephemeral: true });
+      }
     }
 
     // Admin Đổi Tên
@@ -344,15 +391,17 @@ client.on('interactionCreate', async interaction => {
       const newTitle = interaction.fields.getTextInputValue('new_title');
       const session = db[targetMsgId];
 
-      session.title = newTitle;
-      fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+      if (session) {
+        session.title = newTitle;
+        saveData(db);
 
-      try {
-        const targetMsg = await interaction.channel.messages.fetch(targetMsgId);
-        await targetMsg.edit({ embeds: [buildMainEmbed(session)] });
-      } catch (e) {}
+        try {
+          const targetMsg = await interaction.channel.messages.fetch(targetMsgId);
+          await targetMsg.edit({ embeds: [buildMainEmbed(session)] });
+        } catch (e) {}
 
-      return interaction.reply({ content: '✅ Đã cập nhật tên phiên điểm danh!', ephemeral: true });
+        return interaction.reply({ content: '✅ Đã cập nhật tên phiên điểm danh!', ephemeral: true });
+      }
     }
   }
 });
