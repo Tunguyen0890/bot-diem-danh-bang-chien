@@ -42,6 +42,94 @@ const CHECK_IMAGES = {
   saygex: 'https://media.giphy.com/media/3o7TKzb326hYin7JFS/giphy.gif'
 };
 
+// Dữ liệu GIF & Nhận xét bựa tục cho từng mốc hợp nhau (0% -> 100%)
+const COMPATIBILITY_DATA = {
+  0: {
+    gif: 'https://media.giphy.com/media/l1J9u3TZfpmeDLkD6/giphy.gif',
+    comment: 'Khác đéo gì chó với mèo! Nhìn mặt nhau thôi là muốn đấm vỡ mồm đối phương rồi!'
+  },
+  5: {
+    gif: 'https://media.giphy.com/media/3o6ZtaO9BZHcOjmErm/giphy.gif',
+    comment: 'Mối quan hệ hãm lìn! Ở gần nhau 5 phút là có đứa vô viện gắp mảnh thủy tinh.'
+  },
+  10: {
+    gif: 'https://media.giphy.com/media/xT1R9Y42B4X95F77X2/giphy.gif',
+    comment: 'Như nước với lửa. Hợp nhau đúng cái khoản chửi thề với ném đồ vào mặt nhau!'
+  },
+  15: {
+    gif: 'https://media.giphy.com/media/3o7527pa7qs9kCG78A/giphy.gif',
+    comment: 'Oan gia ngõ hẹp! Bước ra đường gặp nhau là muốn xui xẻo cả ngày rồi.'
+  },
+  20: {
+    gif: 'https://media.giphy.com/media/l3q2kXN3pT6GflN6M/giphy.gif',
+    comment: 'Mức độ hợp nhau bằng đúng chiều cao suy nghĩ của mấy đứa trẻ trâu. Nhạt như nước ốc!'
+  },
+  25: {
+    gif: 'https://media.giphy.com/media/26ueYUlFBSuT0Xo4w/giphy.gif',
+    comment: 'Có tí tương tác đấy, nhưng là kiểu "tao coi mày như con nợ, còn mày coi tao như rác".'
+  },
+  30: {
+    gif: 'https://media.giphy.com/media/l0HlCqV35hdEG2GUo/giphy.gif',
+    comment: 'Cũng tàm tạm, vừa đủ để làm bạn xã giao trên bàn nhậu, say lên là móc mỉa nhau tiếp.'
+  },
+  35: {
+    gif: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif',
+    comment: 'Hợp nhau khoản ăn uống, nhưng đụng tới tiền bạc hay tình cảm là "mày là ai tao đéo biết".'
+  },
+  40: {
+    gif: 'https://media.giphy.com/media/3o6Zt481isNVuQI1l6/giphy.gif',
+    comment: 'Mức độ trung bình kém. Thỉnh thoảng dở dở dở điên điên lại thấy đối phương cũng đáng yêu.'
+  },
+  45: {
+    gif: 'https://media.giphy.com/media/xT0xeJpnrWC4XWblEk/giphy.gif',
+    comment: 'Sắp tới ngưỡng bạn thân rồi đấy, nhưng vẫn còn hơi gượng gạo, chưa dám cởi quần đè nhau ra đâu.'
+  },
+  50: {
+    gif: 'https://media.giphy.com/media/l0ErD3Z4f35VobIzS/giphy.gif',
+    comment: 'Nửa sống nửa chín! Nửa muốn làm tri kỷ, nửa muốn táng cho phát vào đầu cho đỡ ngứa mắt.'
+  },
+  55: {
+    gif: 'https://media.giphy.com/media/xT9IgG5083mTnCHDjm/giphy.gif',
+    comment: 'Trên tình bạn dưới tình yêu, nhưng trên hết là tình đồng dâm! Bắt đầu thấy hợp cạ rồi đấy.'
+  },
+  60: {
+    gif: 'https://media.giphy.com/media/26gspjl5bxzhxoBWw/giphy.gif',
+    comment: 'Khá hợp! Đi cà phê bốc phét cả ngày không chán, tối về nhắn tin chửi nhau tiếp.'
+  },
+  65: {
+    gif: 'https://media.giphy.com/media/3o7TKzb326hYin7JFS/giphy.gif',
+    comment: 'Mùi dâm khí bốc lên rồi! Nhìn nhau thôi cũng biết trong đầu đứa kia đang nghĩ trò bựa gì.'
+  },
+  70: {
+    gif: 'https://media.giphy.com/media/l0IybQ6l8J454o52w/giphy.gif',
+    comment: 'Hợp nhau như tay với đít! Rủ nhau đi quậy phá là bao chuẩn, đéo ai cản nổi.'
+  },
+  75: {
+    gif: 'https://media.giphy.com/media/dJe8wgptDLAv9Re78T/giphy.gif',
+    comment: 'Tri kỷ cmnr! Bắt sóng thần tốc, đứa xướng đứa họa làm cõi mạng điên đảo.'
+  },
+  80: {
+    gif: 'https://media.giphy.com/media/6vE3Y7KE6ss8M/giphy.gif',
+    comment: 'Duyên nợ truyền kiếp! Kiếp trước chắc tính sổ chung tiền nhà trọ nên kiếp này dính như gớm.'
+  },
+  85: {
+    gif: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif',
+    comment: 'Quá hợp luôn! Sinh ra là để dành cho nhau, không làm người yêu thì cũng làm cặp bài trùng quấy đục nước!'
+  },
+  90: {
+    gif: 'https://media.giphy.com/media/l0HlTy9x8K53EQD9S/giphy.gif',
+    comment: 'Trời sinh một cặp, đất sinh một đôi! Chỉ cần cái nháy mắt là cởi đồ... à nhầm, cởi mở lòng ngay!'
+  },
+  95: {
+    gif: 'https://media.giphy.com/media/26vUt9Y74pB6TqG0E/giphy.gif',
+    comment: 'Cực phẩm tâm giao! Hợp từ tính cách đến cái nết bựa tục, tách ra là trái đất chao đảo liền!'
+  },
+  100: {
+    gif: 'https://media.giphy.com/media/L2XhHcmM55533fYnmA/giphy.gif',
+    comment: 'TUYỆT PHỐI THIÊN HẠ! Đôi lứa xứng đôi, đéo còn từ nào để tả! Cưới ngay đi kẻo thằng khác nó hốt!'
+  }
+};
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -71,11 +159,27 @@ function getPercentage(userId, type) {
   return Math.abs(hash) % 101;
 }
 
+// Hàm tính % hợp nhau giữa 2 người dùng cố định
+function getCouplePercentage(userId1, userId2) {
+  const sortedIds = [userId1, userId2].sort().join('_');
+  let hash = 0;
+  for (let i = 0; i < sortedIds.length; i++) {
+    hash = sortedIds.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash) % 101;
+}
+
 function createProgressBar(percent, emoji = '🏳️‍🌈') {
   const total = 10;
   const progress = Math.round((percent / 100) * total);
   const empty = total - progress;
   return `[${emoji.repeat(progress)}${'⬛'.repeat(empty)}] **${percent}%**`;
+}
+
+// Hàm lấy dữ liệu GIF và comment cho độ hợp nhau lùi về bội số của 5
+function getCompatibilityData(percent) {
+  const rounded = Math.floor(percent / 5) * 5;
+  return COMPATIBILITY_DATA[rounded] || COMPATIBILITY_DATA[0];
 }
 
 // Hàm trả về comment mặn mòi, bựa cho từng loại
@@ -114,7 +218,7 @@ function getCheckComment(type, percent) {
     saygex: [
       { max: 15, text: 'Tâm hồn thanh tịnh, chưa bao giờ mơ thấy cảnh đấu kiếm.' },
       { max: 45, text: 'Bắt đầu có máu Say Gex trong người, hay liếc mông mấy thằng anh em.' },
-      { max: 75, text: 'Đam mê thông đít đấu kiếm nồng cháy! Thèm cảm giác mạnh dữ lắm rồi!' },
+      { max: 75, text: 'Đam đam thông đít đấu kiếm nồng cháy! Thèm cảm giác mạnh dữ lắm rồi!' },
       { max: 100, text: 'BẬC THẦY SAY GEX! Địch hay đệ cũng cởi quần ra đâm tuốt, né xa 10m!' }
     ]
   };
@@ -278,6 +382,13 @@ client.on(Events.ClientReady, async () => {
           .setDescription('Kiểm tra chỉ số cuồng Say Gex (Đấu kiếm) của bản thân hoặc người khác')
           .addUserOption(opt => opt.setName('user').setDescription('Thành viên muốn kiểm tra').setRequired(false))
           .setIntegrationTypes(integrationTypes)
+          .setContexts(contexts),
+
+        new SlashCommandBuilder()
+          .setName('check-hopnhau')
+          .setDescription('Kiểm tra mức độ hợp nhau giữa bạn và người khác')
+          .addUserOption(opt => opt.setName('user').setDescription('Người bạn muốn kiểm tra độ hợp nhau').setRequired(true))
+          .setIntegrationTypes(integrationTypes)
           .setContexts(contexts)
       ]
     });
@@ -292,6 +403,33 @@ client.on(Events.InteractionCreate, async (interaction) => {
     // 1. SLASH COMMANDS
     if (interaction.isChatInputCommand()) {
       const { commandName } = interaction;
+
+      if (commandName === 'check-hopnhau') {
+        const user1 = interaction.user;
+        const user2 = interaction.options.getUser('user');
+
+        if (user1.id === user2.id) {
+          return await interaction.reply({ content: '❌ Tự kiểm tra với chính mình làm đéo gì? Tự luyến vừa thôi cha!', ephemeral: true });
+        }
+
+        const percent = getCouplePercentage(user1.id, user2.id);
+        const data = getCompatibilityData(percent);
+        const progressBar = createProgressBar(percent, '❤️');
+
+        const embed = new EmbedBuilder()
+          .setTitle('💞 MÁY QUÉT ĐỘ HỢP NHAU')
+          .setColor('#FF1493')
+          .setThumbnail(user1.displayAvatarURL({ dynamic: true }))
+          .setImage(data.gif)
+          .setDescription(`Kết quả phân tích độ hợp nhau giữa **${user1.username}** và **${user2.username}**:`)
+          .addFields(
+            { name: '📊 Chỉ số duyên nợ', value: `${progressBar}`, inline: false },
+            { name: '💬 Đánh giá mặn mòi', value: `*${data.comment}*`, inline: false }
+          )
+          .setFooter({ text: 'Kết quả mang tính chất giải trí bựa tục!' });
+
+        return await interaction.reply({ embeds: [embed] });
+      }
 
       if (['check-gay', 'check-les', 'check-beophi', 'check-wibu', 'check-haiten', 'check-saygex'].includes(commandName)) {
         const target = interaction.options.getUser('user') || interaction.user;
