@@ -217,6 +217,11 @@ function buildComponents(isOpen = true) {
 client.on(Events.ClientReady, async () => {
   console.log(`🤖 Bot đã khởi động với tên: ${client.user.tag}`);
   const rest = new REST({ version: '10' }).setToken(TOKEN);
+
+  // Cấu hình hỗ trợ User App
+  const integrationTypes = [0, 1]; // 0: Guild Install, 1: User Install
+  const contexts = [0, 1, 2];         // 0: Guild, 1: Bot DM, 2: External Server/DM (Server không có Bot)
+
   try {
     await rest.put(Routes.applicationCommands(client.application.id), {
       body: [
@@ -230,35 +235,47 @@ client.on(Events.ClientReady, async () => {
         new SlashCommandBuilder()
           .setName('check-gay')
           .setDescription('Kiểm tra tỷ lệ Gay của bản thân hoặc người khác')
-          .addUserOption(opt => opt.setName('user').setDescription('Thành viên muốn kiểm tra').setRequired(false)),
+          .addUserOption(opt => opt.setName('user').setDescription('Thành viên muốn kiểm tra').setRequired(false))
+          .setIntegrationTypes(integrationTypes)
+          .setContexts(contexts),
 
         new SlashCommandBuilder()
           .setName('check-les')
           .setDescription('Kiểm tra tỷ lệ Les của bản thân hoặc người khác')
-          .addUserOption(opt => opt.setName('user').setDescription('Thành viên muốn kiểm tra').setRequired(false)),
+          .addUserOption(opt => opt.setName('user').setDescription('Thành viên muốn kiểm tra').setRequired(false))
+          .setIntegrationTypes(integrationTypes)
+          .setContexts(contexts),
 
         new SlashCommandBuilder()
           .setName('check-beophi')
           .setDescription('Kiểm tra mức độ béo phì của bản thân hoặc người khác')
-          .addUserOption(opt => opt.setName('user').setDescription('Thành viên muốn kiểm tra').setRequired(false)),
+          .addUserOption(opt => opt.setName('user').setDescription('Thành viên muốn kiểm tra').setRequired(false))
+          .setIntegrationTypes(integrationTypes)
+          .setContexts(contexts),
 
         new SlashCommandBuilder()
           .setName('check-wibu')
           .setDescription('Kiểm tra mức độ Wibu của bản thân hoặc người khác')
-          .addUserOption(opt => opt.setName('user').setDescription('Thành viên muốn kiểm tra').setRequired(false)),
+          .addUserOption(opt => opt.setName('user').setDescription('Thành viên muốn kiểm tra').setRequired(false))
+          .setIntegrationTypes(integrationTypes)
+          .setContexts(contexts),
 
         new SlashCommandBuilder()
           .setName('check-haiten')
           .setDescription('Kiểm tra chỉ số nghiện HaiTen (Hentai) của bản thân hoặc người khác')
-          .addUserOption(opt => opt.setName('user').setDescription('Thành viên muốn kiểm tra').setRequired(false)),
+          .addUserOption(opt => opt.setName('user').setDescription('Thành viên muốn kiểm tra').setRequired(false))
+          .setIntegrationTypes(integrationTypes)
+          .setContexts(contexts),
 
         new SlashCommandBuilder()
           .setName('check-saygex')
           .setDescription('Kiểm tra chỉ số cuồng Say Gex (Đấu kiếm) của bản thân hoặc người khác')
           .addUserOption(opt => opt.setName('user').setDescription('Thành viên muốn kiểm tra').setRequired(false))
+          .setIntegrationTypes(integrationTypes)
+          .setContexts(contexts)
       ]
     });
-    console.log('✅ Đã cập nhật xong hệ thống Slash Command');
+    console.log('✅ Đã cập nhật xong hệ thống Slash Command (Tích hợp User App thành công)!');
   } catch (e) {
     console.error('Lỗi đăng ký Slash Command:', e);
   }
