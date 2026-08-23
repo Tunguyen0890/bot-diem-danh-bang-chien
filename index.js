@@ -218,7 +218,7 @@ function getCheckComment(type, percent) {
     saygex: [
       { max: 15, text: 'Tâm hồn thanh tịnh, chưa bao giờ mơ thấy cảnh đấu kiếm.' },
       { max: 45, text: 'Bắt đầu có máu Say Gex trong người, hay liếc mông mấy thằng anh em.' },
-      { max: 75, text: 'Đam đam thông đít đấu kiếm nồng cháy! Thèm cảm giác mạnh dữ lắm rồi!' },
+      { max: 75, text: 'Đam mê thông đít đấu kiếm nồng cháy! Thèm cảm giác mạnh dữ lắm rồi!' },
       { max: 100, text: 'BẬC THẦY SAY GEX! Địch hay đệ cũng cởi quần ra đâm tuốt, né xa 10m!' }
     ]
   };
@@ -386,8 +386,9 @@ client.on(Events.ClientReady, async () => {
 
         new SlashCommandBuilder()
           .setName('check-hopnhau')
-          .setDescription('Kiểm tra mức độ hợp nhau giữa bạn và người khác')
-          .addUserOption(opt => opt.setName('user').setDescription('Người bạn muốn kiểm tra độ hợp nhau').setRequired(true))
+          .setDescription('Kiểm tra mức độ hợp nhau giữa 2 người dùng')
+          .addUserOption(opt => opt.setName('user2').setDescription('Người thứ hai muốn kiểm tra').setRequired(true))
+          .addUserOption(opt => opt.setName('user1').setDescription('Người thứ nhất (Để trống sẽ lấy chính bạn)').setRequired(false))
           .setIntegrationTypes(integrationTypes)
           .setContexts(contexts)
       ]
@@ -405,8 +406,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
       const { commandName } = interaction;
 
       if (commandName === 'check-hopnhau') {
-        const user1 = interaction.user;
-        const user2 = interaction.options.getUser('user');
+        const user1 = interaction.options.getUser('user1') || interaction.user;
+        const user2 = interaction.options.getUser('user2');
 
         if (user1.id === user2.id) {
           return await interaction.reply({ content: '❌ Tự kiểm tra với chính mình làm đéo gì? Tự luyến vừa thôi cha!', ephemeral: true });
