@@ -15,8 +15,6 @@ const {
   PermissionsBitField,
   ChannelType
 } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
 
 // ⚠️ Bot sử dụng Process Environment Variable TOKEN
 const TOKEN = process.env.TOKEN || 'YOUR_BOT_TOKEN_HERE';
@@ -141,88 +139,6 @@ const client = new Client({
 });
 
 const activeSessions = new Map();
-
-// ==========================================
-// HỆ THỐNG LẶP LẠI NHẮC NHỞ THEO THỨ (CARL-BOT)
-// ==========================================
-const RECURRING_FILE = path.join(__dirname, 'recurring_reminders.json');
-let recurringReminders = [];
-
-function loadRecurringReminders() {
-  try {
-    if (fs.existsSync(RECURRING_FILE)) {
-      recurringReminders = JSON.parse(fs.readFileSync(RECURRING_FILE, 'utf8'));
-    }
-  } catch (err) {
-    console.error('Lỗi khi tải file recurring_reminders.json:', err);
-    recurringReminders = [];
-  }
-}
-
-function saveRecurringReminders() {
-  try {
-    fs.writeFileSync(RECURRING_FILE, JSON.stringify(recurringReminders, null, 2), 'utf8');
-  } catch (err) {
-    console.error('Lỗi khi ghi file recurring_reminders.json:', err);
-  }
-}
-
-async function triggerRecurringReminder(item) {
-  try {
-    const channel = await client.channels.fetch(item.channelId).catch(() => null);
-    if (channel) {
-      const roleMention = item.roleId ? `<@&${item.roleId}>` : '';
-      const embed = new EmbedBuilder()
-        .setTitle(item.title || '🔔 THÔNG BÁO SỰ KIỆN')
-        .setColor(item.color || '#F1C40F')
-        .setDescription(item.message)
-        .addFields(
-          { name: '⏰ Thời điểm gửi', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
-          { name: '🔁 Lặp lại', value: item.repeatWeekly ? 'Hàng tuần' : 'Một lần', inline: true }
-        )
-        .setFooter({ text: 'Hệ thống nhắc nhở tự động' })
-        .setTimestamp();
-
-      if (item.image) embed.setImage(item.image);
-
-      await channel.send({
-        content: roleMention ? `🔔 ${roleMention}` : undefined,
-        embeds: [embed]
-      });
-    }
-  } catch (err) {
-    console.error(`Lỗi phát nhắc nhở [${item.id}]:`, err);
-  }
-}
-
-function checkAndRunReminders() {
-  const now = new Date();
-  const currentDay = now.getDay(); // 0: CN, 1: T2, ..., 6: T7
-  const currentHours = now.getHours();
-  const currentMinutes = now.getMinutes();
-
-  recurringReminders.forEach((item, index) => {
-    if (item.days.includes(currentDay)) {
-      const [h, m] = item.timeStr.split(':').map(Number);
-      if (h === currentHours && m === currentMinutes) {
-        // Tránh bị bắn tin trùng lặp trong cùng 1 phút
-        const lastRan = item.lastTriggered ? new Date(item.lastTriggered) : null;
-        if (!lastRan || lastRan.toDateString() !== now.toDateString() || lastRan.getHours() !== currentHours || lastRan.getMinutes() !== currentMinutes) {
-          item.lastTriggered = now.toISOString();
-          triggerRecurringReminder(item);
-
-          if (!item.repeatWeekly) {
-            recurringReminders.splice(index, 1);
-          }
-          saveRecurringReminders();
-        }
-      }
-    }
-  });
-}
-
-// Chạy vòng lặp kiểm tra mỗi 30 giây
-setInterval(checkAndRunReminders, 30000);
 
 process.on('unhandledRejection', (error) => console.error('Hệ thống bắt Unhandled Rejection:', error));
 process.on('uncaughtException', (error) => console.error('Hệ thống bắt Uncaught Exception:', error));
@@ -411,8 +327,6 @@ function buildComponents(isOpen = true) {
 
 client.on(Events.ClientReady, async () => {
   console.log(`🤖 Bot đã khởi động với tên: ${client.user.tag}`);
-  loadRecurringReminders(); // Khởi tạo dữ liệu nhắc nhở lặp lại
-
   const rest = new REST({ version: '10' }).setToken(TOKEN);
 
   const integrationTypes = [0, 1];
@@ -427,34 +341,6 @@ client.on(Events.ClientReady, async () => {
           .addStringOption(opt => opt.setName('ten').setDescription('Tên phiên điểm danh').setRequired(true))
           .addNumberOption(opt => opt.setName('gio').setDescription('Thời gian mở (giờ)').setRequired(false))
           .addChannelOption(opt => opt.setName('kenh').setDescription('Kênh gửi bảng').addChannelTypes(ChannelType.GuildText).setRequired(false)),
-
-        // LỆNH NHẮC NHỞ THEO THỨ / LẶP HÀNG TUẦN (Chỉ Admin)
-        new SlashCommandBuilder()
-          .setName('hen-gio-lap')
-          .setDescription('Đặt nhắc nhở chọn Thứ trong tuần & lặp lại (Chỉ Quản trị viên)')
-          .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator)
-          .addStringOption(opt => opt.setName('noi-dung').setDescription('Nội dung nhắc nhở').setRequired(true))
-          .addStringOption(opt => opt.setName('gio').setDescription('Giờ nhắc (Định dạng HH:mm, ví dụ 20:00)').setRequired(true))
-          .addStringOption(opt => opt.setName('thu').setDescription('Chọn Thứ trong tuần').setRequired(true)
-            .addChoices(
-              { name: 'Thứ 2 đến Chủ Nhật (Mỗi ngày)', value: '0,1,2,3,4,5,6' },
-              { name: 'Thứ 2 đến Thứ 6 (Ngày tuần)', value: '1,2,3,4,5' },
-              { name: 'Thứ 7 & Chủ Nhật (Cuối tuần)', value: '0,6' },
-              { name: 'Chỉ Thứ 2', value: '1' },
-              { name: 'Chỉ Thứ 3', value: '2' },
-              { name: 'Chỉ Thứ 4', value: '3' },
-              { name: 'Chỉ Thứ 5', value: '4' },
-              { name: 'Chỉ Thứ 6', value: '5' },
-              { name: 'Chỉ Thứ 7', value: '6' },
-              { name: 'Chỉ Chủ Nhật', value: '0' }
-            )
-          )
-          .addBooleanOption(opt => opt.setName('lap-hang-tuan').setDescription('Lặp lại hàng tuần? (Default: True)').setRequired(false))
-          .addRoleOption(opt => opt.setName('role').setDescription('Role cần ping').setRequired(false))
-          .addStringOption(opt => opt.setName('tieu-de').setDescription('Tiêu đề bảng Embed').setRequired(false))
-          .addStringOption(opt => opt.setName('mau-sac').setDescription('Mã màu Hex (VD: #FF0000)').setRequired(false))
-          .addStringOption(opt => opt.setName('hinh-anh').setDescription('URL hình ảnh/GIF').setRequired(false))
-          .addChannelOption(opt => opt.setName('kenh').setDescription('Kênh phát').addChannelTypes(ChannelType.GuildText).setRequired(false)),
 
         new SlashCommandBuilder()
           .setName('check-gay')
@@ -518,70 +404,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
     // 1. SLASH COMMANDS
     if (interaction.isChatInputCommand()) {
       const { commandName } = interaction;
-
-      // XỬ LÝ LỆNH NHẮC NHỞ LẶP LẠI
-      if (commandName === 'hen-gio-lap') {
-        if (!interaction.memberPermissions?.has(PermissionsBitField.Flags.Administrator)) {
-          return await interaction.reply({ 
-            content: '🚫 **Chỉ Quản trị viên (Administrator) mới có quyền dùng lệnh này!**', 
-            ephemeral: true 
-          });
-        }
-
-        const message = interaction.options.getString('noi-dung');
-        const timeStr = interaction.options.getString('gio');
-        const daysStr = interaction.options.getString('thu');
-        const repeatWeekly = interaction.options.getBoolean('lap-hang-tuan') ?? true;
-        const role = interaction.options.getRole('role');
-        const title = interaction.options.getString('tieu-de');
-        const color = interaction.options.getString('mau-sac');
-        const image = interaction.options.getString('hinh-anh');
-        const channel = interaction.options.getChannel('kenh') || interaction.channel;
-
-        // Validation định dạng giờ
-        if (!/^\d{1,2}:\d{2}$/.test(timeStr)) {
-          return await interaction.reply({
-            content: '❌ **Định dạng giờ không hợp lệ!** Vui lòng nhập chuẩn theo dạng `HH:mm` (Ví dụ: `20:00` hoặc `08:30`).',
-            ephemeral: true
-          });
-        }
-
-        const days = daysStr.split(',').map(Number);
-        const dayNames = { 0: 'CN', 1: 'T2', 2: 'T3', 3: 'T4', 4: 'T5', 5: 'T6', 6: 'T7' };
-        const selectedDaysText = days.map(d => dayNames[d]).join(', ');
-
-        const newReminder = {
-          id: Date.now().toString(),
-          guildId: interaction.guildId,
-          channelId: channel.id,
-          roleId: role ? role.id : null,
-          message,
-          timeStr,
-          days,
-          repeatWeekly,
-          title: title || '🔔 THÔNG BÁO SỰ KIỆN',
-          color: color || '#F1C40F',
-          image: image || null,
-          createdBy: interaction.user.id
-        };
-
-        recurringReminders.push(newReminder);
-        saveRecurringReminders();
-
-        const previewEmbed = new EmbedBuilder()
-          .setTitle(newReminder.title)
-          .setColor(newReminder.color)
-          .setDescription(message)
-          .setFooter({ text: 'Bản xem trước Embed' });
-
-        if (image) previewEmbed.setImage(image);
-
-        return await interaction.reply({
-          content: `✅ **Đã cài đặt lịch nhắc nhở thành công!**\n🆔 ID: \`${newReminder.id}\`\n📢 Kênh phát: <#${channel.id}>\n📅 Ngày phát: **${selectedDaysText}** hàng tuần\n⏰ Giờ phát: **${timeStr}**\n🔁 Lặp lại hàng tuần: **${repeatWeekly ? 'Có' : 'Không'}**\n👥 Tag Role: ${role ? `<@&${role.id}>` : '*Không*'}`,
-          embeds: [previewEmbed],
-          ephemeral: true
-        });
-      }
 
       if (commandName === 'check-hopnhau') {
         const user1 = interaction.options.getUser('user1') || interaction.user;
