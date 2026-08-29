@@ -15,6 +15,8 @@ const {
   PermissionsBitField,
   ChannelType
 } = require('discord.js');
+const fs = require('fs');
+const path = require('path');
 
 // ⚠️ Bot sử dụng Process Environment Variable TOKEN
 const TOKEN = process.env.TOKEN || 'YOUR_BOT_TOKEN_HERE';
@@ -140,6 +142,77 @@ const client = new Client({
 
 const activeSessions = new Map();
 
+// --- BẮT ĐẦU HỆ THỐNG LƯU TRỮ NHẮC LỊCH CỐ ĐỊNH ---
+const REMINDERS_FILE = path.join(__dirname, 'reminders.json');
+let reminders = [];
+const activeTimers = new Map();
+
+function loadReminders() {
+  if (fs.existsSync(REMINDERS_FILE)) {
+    try {
+      const data = fs.readFileSync(REMINDERS_FILE, 'utf8');
+      reminders = JSON.parse(data);
+    } catch (e) {
+      console.error('Lỗi khi đọc file reminders.json:', e);
+      reminders = [];
+    }
+  } else {
+    reminders = [];
+  }
+}
+
+function saveReminders() {
+  try {
+    fs.writeFileSync(REMINDERS_FILE, JSON.stringify(reminders, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Lỗi khi ghi file reminders.json:', e);
+  }
+}
+
+function scheduleReminder(reminder) {
+  const delay = reminder.time - Date.now();
+  if (delay <= 0) {
+    triggerReminder(reminder);
+  } else {
+    const timer = setTimeout(() => {
+      triggerReminder(reminder);
+    }, delay);
+    activeTimers.set(reminder.id, timer);
+  }
+}
+
+async function triggerReminder(reminder) {
+  try {
+    const channel = await client.channels.fetch(reminder.channelId).catch(() => null);
+    if (channel) {
+      const roleMention = reminder.roleId ? `<@&${reminder.roleId}>` : '';
+      const embed = new EmbedBuilder()
+        .setTitle('⏰ THÔNG BÁO NHẮC LỊCH TỰ ĐỘNG')
+        .setColor('#FF9900')
+        .setDescription(reminder.message)
+        .addFields({ name: '👤 Người cài đặt', value: `<@${reminder.createdBy}>`, inline: true })
+        .setTimestamp();
+
+      await channel.send({ content: roleMention ? `🔔 ${roleMention}` : undefined, embeds: [embed] });
+    }
+  } catch (err) {
+    console.error(`Lỗi gửi nhắc lịch [${reminder.id}]:`, err);
+  } finally {
+    reminders = reminders.filter(r => r.id !== reminder.id);
+    activeTimers.delete(reminder.id);
+    saveReminders();
+  }
+}
+
+function initReminders() {
+  loadReminders();
+  const now = Date.now();
+  reminders.forEach(reminder => {
+    scheduleReminder(reminder);
+  });
+}
+// --- KẾT THÚC HỆ THỐNG LƯU TRỮ NHẮC LỊCH ---
+
 process.on('unhandledRejection', (error) => console.error('Hệ thống bắt Unhandled Rejection:', error));
 process.on('uncaughtException', (error) => console.error('Hệ thống bắt Uncaught Exception:', error));
 
@@ -164,7 +237,7 @@ function getCouplePercentage(userId1, userId2) {
   const sortedIds = [userId1, userId2].sort().join('_');
   let hash = 0;
   for (let i = 0; i < sortedIds.length; i++) {
-    hash = sortedIds.charCodeAt(i) + ((hash << 5) - hash);
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
   return Math.abs(hash) % 101;
 }
@@ -327,6 +400,10 @@ function buildComponents(isOpen = true) {
 
 client.on(Events.ClientReady, async () => {
   console.log(`🤖 Bot đã khởi động với tên: ${client.user.tag}`);
+  
+  // Khởi tạo hệ thống nhắc lịch tự lưu
+  initReminders();
+
   const rest = new REST({ version: '10' }).setToken(TOKEN);
 
   const integrationTypes = [0, 1];
@@ -390,7 +467,26 @@ client.on(Events.ClientReady, async () => {
           .addUserOption(opt => opt.setName('user2').setDescription('Người thứ hai muốn kiểm tra').setRequired(true))
           .addUserOption(opt => opt.setName('user1').setDescription('Người thứ nhất (Để trống sẽ lấy chính bạn)').setRequired(false))
           .setIntegrationTypes(integrationTypes)
-          .setContexts(contexts)
+          .setContexts(contexts),
+
+        // --- CÁC LỆNH NHẮC LỊCH DÀNH CHO QUẢN TRỊ VIÊN ---
+        new SlashCommandBuilder()
+          .setName('hen-gio-nhac')
+          .setDescription('Tự động nhắc lịch và tag Role (Dành cho Quản trị viên)')
+          .addStringOption(opt => opt.setName('noi-dung').setDescription('Nội dung cần nhắc nhở').setRequired(true))
+          .addRoleOption(opt => opt.setName('role').setDescription('Role cần tag khi đến giờ').setRequired(false))
+          .addNumberOption(opt => opt.setName('so-phut').setDescription('Nhắc sau bao nhiêu phút nữa').setRequired(false))
+          .addStringOption(opt => opt.setName('thoi-gian').setDescription('Thời gian chuẩn (Định dạng: YYYY-MM-DD HH:mm, VD: 2026-03-30 20:00)').setRequired(false))
+          .addChannelOption(opt => opt.setName('kenh').setDescription('Kênh gửi tin nhắn nhắc nhở').addChannelTypes(ChannelType.GuildText).setRequired(false)),
+
+        new SlashCommandBuilder()
+          .setName('danh-sach-nhac')
+          .setDescription('Xem danh sách các lịch hẹn đang chờ gửi trong server'),
+
+        new SlashCommandBuilder()
+          .setName('xoa-nhac')
+          .setDescription('Xóa một lịch nhắc nhở theo ID')
+          .addStringOption(opt => opt.setName('id').setDescription('ID của lịch nhắc cần xóa').setRequired(true))
       ]
     });
     console.log('✅ Đã cập nhật xong hệ thống Slash Command!');
@@ -404,6 +500,109 @@ client.on(Events.InteractionCreate, async (interaction) => {
     // 1. SLASH COMMANDS
     if (interaction.isChatInputCommand()) {
       const { commandName } = interaction;
+
+      // Xử lý các lệnh nhắc lịch mới
+      if (['hen-gio-nhac', 'danh-sach-nhac', 'xoa-nhac'].includes(commandName)) {
+        // KIỂM TRA QUYỀN QUẢN TRỊ VIÊN
+        const isServerOwner = interaction.guild?.ownerId === interaction.user.id;
+        const isAdmin = interaction.memberPermissions?.has(PermissionsBitField.Flags.Administrator);
+        const hasManagerRole = interaction.member?.roles?.cache.some(r => 
+          ['điều phối', 'quản lý', 'quản lí', 'dieu phoi', 'quan ly', 'admin'].includes(r.name.toLowerCase())
+        );
+
+        if (!isServerOwner && !isAdmin && !hasManagerRole) {
+          return await interaction.reply({ 
+            content: '🚫 **Chỉ Quản Trị Viên hoặc BQL Server mới có quyền dùng nhóm lệnh nhắc lịch này!**', 
+            ephemeral: true 
+          });
+        }
+
+        if (commandName === 'hen-gio-nhac') {
+          const message = interaction.options.getString('noi-dung');
+          const role = interaction.options.getRole('role');
+          const minutes = interaction.options.getNumber('so-phut');
+          const timeStr = interaction.options.getString('thoi-gian');
+          const channel = interaction.options.getChannel('kenh') || interaction.channel;
+
+          let targetTime = null;
+
+          if (minutes) {
+            targetTime = Date.now() + minutes * 60 * 1000;
+          } else if (timeStr) {
+            const parsed = new Date(timeStr.replace(' ', 'T'));
+            if (!isNaN(parsed.getTime())) {
+              targetTime = parsed.getTime();
+            }
+          }
+
+          if (!targetTime || targetTime <= Date.now()) {
+            return await interaction.reply({ 
+              content: '❌ **Thời gian không hợp lệ!** Vui lòng nhập số phút hợp lệ hoặc định dạng giờ đúng: `YYYY-MM-DD HH:mm` (phải ở tương lai).', 
+              ephemeral: true 
+            });
+          }
+
+          const newReminder = {
+            id: Date.now().toString(),
+            guildId: interaction.guildId,
+            channelId: channel.id,
+            roleId: role ? role.id : null,
+            message,
+            time: targetTime,
+            createdBy: interaction.user.id
+          };
+
+          reminders.push(newReminder);
+          saveReminders();
+          scheduleReminder(newReminder);
+
+          const timeUnix = Math.floor(targetTime / 1000);
+          return await interaction.reply({
+            content: `✅ **Đã cài đặt lịch nhắc nhở thành công!**\n🆔 ID: \`${newReminder.id}\`\n📢 Kênh: <#${channel.id}>\n👥 Role tag: ${role ? `<@&${role.id}>` : '*Không có*'}\n⏰ Thời gian bắn tin: <t:${timeUnix}:F> (<t:${timeUnix}:R>)\n📝 Nội dung: *${message}*`,
+            ephemeral: true
+          });
+        }
+
+        if (commandName === 'danh-sach-nhac') {
+          const guildReminders = reminders.filter(r => r.guildId === interaction.guildId);
+          if (guildReminders.length === 0) {
+            return await interaction.reply({ content: '📭 Hiện tại không có lịch nhắc nào đang chờ trong server!', ephemeral: true });
+          }
+
+          const embed = new EmbedBuilder()
+            .setTitle('📅 DANH SÁCH LỊCH NHẮC NHỞ ĐANG CHỜ')
+            .setColor('#00AAAA');
+
+          guildReminders.forEach((r, i) => {
+            const timeUnix = Math.floor(r.time / 1000);
+            embed.addFields({
+              name: `${i + 1}. ID: ${r.id}`,
+              value: `📢 **Kênh:** <#${r.channelId}>\n👥 **Role:** ${r.roleId ? `<@&${r.roleId}>` : 'Không'}\n⏰ **Thời gian:** <t:${timeUnix}:R>\n📝 **Nội dung:** ${r.message}`
+            });
+          });
+
+          return await interaction.reply({ embeds: [embed], ephemeral: true });
+        }
+
+        if (commandName === 'xoa-nhac') {
+          const id = interaction.options.getString('id');
+          const index = reminders.findIndex(r => r.id === id && r.guildId === interaction.guildId);
+
+          if (index === -1) {
+            return await interaction.reply({ content: '❌ Không tìm thấy lịch nhắc với ID này!', ephemeral: true });
+          }
+
+          if (activeTimers.has(id)) {
+            clearTimeout(activeTimers.get(id));
+            activeTimers.delete(id);
+          }
+
+          reminders.splice(index, 1);
+          saveReminders();
+
+          return await interaction.reply({ content: `🗑️ Đã xóa lịch nhắc ID \`${id}\` thành công!`, ephemeral: true });
+        }
+      }
 
       if (commandName === 'check-hopnhau') {
         const user1 = interaction.options.getUser('user1') || interaction.user;
