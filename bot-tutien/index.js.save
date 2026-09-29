@@ -1,0 +1,140 @@
+1541074928596680815const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const fs = require('fs');
+
+const TOKEN = 'YOUR_BOT_TOKEN_HERE';
+const CLIENT_ID = 'YOUR_CLIENT_ID_HERE';
+
+// Khởi tạo Client
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+
+// File lưu dữ liệu người chơi
+const DB_FILE = './database.json';
+let db = {};
+if (fs.existsSync(DB_FILE)) {
+    db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+}
+
+function saveDB() {
+    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+}
+
+// Cấu hình Cảnh Giới
+const CANH_GIOI = [
+    { name: 'Luyện Khí', maxTuVi: 100 },
+    { name: 'Trúc Cơ', maxTuVi: 500 },
+    { name: 'KIM ĐAN', maxTuVi: 2000 },
+    { name: 'Nguyên Anh', maxTuVi: 10000 },
+    { name: 'Hóa Thần', maxTuVi: 50000 }
+];
+
+// Định nghĩa Lệnh Slash
+const commands = [
+    new SlashCommandBuilder()
+        .setName('tutien')
+        .setDescription('Hệ thống Tu Tiên')
+        .addSubcommand(sub => sub.setName('dky').setDescription('Khởi tạo nhân vật Tu Tiên'))
+        .addSubcommand(sub => sub.setName('me').setDescription('Xem trạng thái cá nhân'))
+        .addSubcommand(sub => sub.setName('tuluyen').setDescription('Tích lũy tu vi (Tốn thể lực)'))
+        .addSubcommand(sub => sub.setName('dotpha').setDescription('Tiến hành đột phá cảnh giới'))
+].map(cmd => cmd.toJSON());
+
+// Đăng ký Slash Commands với Discord API
+const rest = new REST({ version: '10' }).setToken(TOKEN);
+(async () => {
+    try {
+        console.log('Đang đăng ký lệnh Slash...');
+        await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
+        console.log('Đăng ký lệnh thành công!');
+    } catch (error) {
+        console.error(error);
+    }
+})();
+
+// Xử lý sự kiện tương tác
+client.on('interactionCreate', asn.isChatInputCommand()) return;
+    if (interaction.commandName !== 'tutien') return;
+
+    const sub = interaction.options.getSubcommand();
+    const userId = interaction.user.id;
+
+    // 1. Lệnh Đăng Ký
+    if (sub === 'dky') {
+        if (db[userId]) {
+            return interaction.reply({ content: 'Đạo hữu đã nhập môn từ trước rồi!', flags: 64 });
+        }
+        db[userId] = {
+            levelIndex: 0,
+            tuVi: 0,
+            theLuc: 100,
+            linhThach: 10
+        };
+        saveDB();
+        return interaction.reply(`🎉 Chúc mừng **${interaction.user.username}** đã bước vào con đường Tu Tiên! Cảnh giới hiện tại: **Luyện Khí**.`);
+    }
+
+    // Kiểm tra người chơi đã đăng ký chưa cho các lệnh còn lại
+    if (!db[userId]) {
+        return interaction.reply({ content: 'Bạn chưa đăng ký! Dùng lệnh `/tutien dky` để bắt đầu.', flags: 64 });
+    }
+
+    const player = db[userId];
+    const currentTier = CANH_GIOI[player.levelIndex];
+
+    // 2. Xem Trạng Thái Cá Nhân
+    if (sub === 'me') {
+        const embed = new EmbedBuilder()
+            .setTitle(`📜 Hồ Sơ Tu Tiên - ${interaction.user.username}`)
+            .setColor('#2b2d31')
+            .addFields(
+                { name: 'Cảnh Giới', value: currentTier.name, inline: true },
+                { name: 'Tu Vi', value: `${player.tuVi}/${currentTier.maxTuVi}`, inline: true },
+                { name: 'Thể Lực', value: `${player.theLuc}/100`, inline: true },
+                { name: 'Linh Thạch', value: `${player.linhThach} 💎`, inline: true }
+            );
+        return interaction.reply({ embeds: [embed] });
+    }
+
+    // 3. Tu Luyện (Tích lũy Tu Vi)
+    if (sub === 'tuluyen') {
+        if (player.theLuc < 10) {
+            return interaction.reply({ content: 'Thể lực không đủ (cần 10 thể lực). Hãy nghỉ ngơi!', flags: 64 });
+        }
+        
+        const gain = Math.floor(Math.random() * 15) + 10; // Random 10-25 tu vi
+        player.theLuc -= 10;
+        player.tuVi += gain;
+        saveDB();
+
+        return interaction.reply(`🧘 Bạn vận công tu luyện, nhận được **+${gain} Tu Vi**. Thể lực còn lại: **${player.theLuc}**.`);
+    }
+
+    // 4. Đột Phá Cảnh Giới
+    if (sub === 'dotpha') {
+        if (player.tuVi < currentTier.maxTuVi) {
+            return interaction.reply({ content: `Tu vi chưa đạt đỉnh phong (${player.tuVi}/${currentTier.maxTuVi}), chưa thể đột phá!`, flags: 64 });
+        }
+        if (player.levelIndex >= CANH_GIOI.length - 1) {
+            return interaction.reply({ content: 'Bạn đã đạt tới cảnh giới tối cao!', flags: 64 });
+        }
+
+        // Tỷ lệ thành công 70%
+        const success = Math.random() < 0.7;
+        if (success) {
+            player.levelIndex += 1;
+            player.tuVi = 0;
+            saveDB();
+            return interaction.reply(`⚡ **THÀNH CÔNG!** Thiên kiếp đi qua, bạn đã đột phá lên cảnh giới **${CANH_GIOI[player.levelIndex].name}**!`);
+        } else {
+            player.tuVi = Math.floor(player.tuVi * 0.8); // Thất bại mất 20% tu vi
+            saveDB();
+            return interaction.reply(`💥 **THẤT BẠI!** Tâm ma quấy phá, bạn tổn hại 20% tu vi. Hãy củng cố lại đạo tâm!`);
+        }
+    }
+});
+
+client.once('ready', () => {
+    console.log(`Bot đã online với tên: ${client.user.tag}`);
+});
+
+client.login(TOKEN);
+
