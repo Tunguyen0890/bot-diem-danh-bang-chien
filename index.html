@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Bảng Xếp Team Bang Chiến</title>
+  <!-- Nhúng Firebase Web SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 20px; }
+    h1 { color: #00d2ff; }
+    .class-box { background: #1e1e1e; margin-bottom: 15px; padding: 15px; border-radius: 8px; }
+    .member-item { background: #2a2a2a; padding: 8px; margin: 5px 0; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1 id="session-title">⏳ Đang tải dữ liệu điểm danh...</h1>
+  <div id="content"></div>
+
+  <script>
+    // ⚠️ ĐIỀN CẤU HÌNH FIREBASE VÀO ĐÂY
+    const firebaseConfig = {
+      databaseURL: "YOUR_FIREBASE_DATABASE_URL" // Thay link Firebase của bạn ở Phần 1 vào đây
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    // Lấy ID server từ đường dẫn URL (Ví dụ: index.html?guild=1543232724326678669)
+    const urlParams = new URLSearchParams(window.location.search);
+    const guildId = urlParams.get('guild');
+
+    if (!guildId) {
+      document.getElementById('session-title').innerText = "⚠️ Thiếu ID Guild trên đường dẫn (?guild=ID)";
+    } else {
+      const dbRef = firebase.database().ref(`guilds/${guildId}`);
+      
+      // Lắng nghe dữ liệu thay đổi Realtime từ Discord
+      dbRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (!data) {
+          document.getElementById('session-title').innerText = "❌ Không tìm thấy dữ liệu phiên điểm danh.";
+          return;
+        }
+
+        document.getElementById('session-title').innerText = "⚔️ " + data.title + (data.isOpen ? " (Đang mở)" : " (Đã đóng)");
+        let html = "";
+
+        // Hiển thị danh sách từng phái
+        for (const [classId, members] of Object.entries(data.members || {})) {
+          html += `<div class="class-box"><h3>Phái: ${classId.toUpperCase()} (${members.length})</h3>`;
+          members.forEach((m, i) => {
+            html += `<div class="member-item">${i + 1}. ${m.name}</div>`;
+          });
+          html += `</div>`;
+        }
+        document.getElementById('content').innerHTML = html;
+      });
+    }
+  </script>
+</body>
+</html>
