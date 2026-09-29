@@ -18,36 +18,40 @@ const {
 } = require('discord.js');
 const admin = require('firebase-admin');
 
-// ⚠️ CẤU HÌNH BIẾN MÔI TRƯỜNG (ENVIRONMENT VARIABLES)
-const TOKEN = process.env.TOKEN || 'YOUR_BOT_TOKEN_HERE';
+// ⚠️ LẤY TOKEN VÀ FIREBASE TỪ BIẾN MÔI TRƯỜNG (VARIABLES) TRÊN RAILWAY
+const TOKEN = process.env.TOKEN;
 
-// ⚠️ CẤU HÌNH FIREBASE (Điền thông tin từ file JSON Firebase ở Phần 1 vào đây hoặc cài trên Render)
-const FIREBASE_DB_URL = process.env.FIREBASE_DB_URL || 'YOUR_FIREBASE_DATABASE_URL';
-const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'YOUR_PROJECT_ID';
-const FIREBASE_CLIENT_EMAIL = process.env.FIREBASE_CLIENT_EMAIL || 'YOUR_CLIENT_EMAIL';
-const FIREBASE_PRIVATE_KEY = (process.env.FIREBASE_PRIVATE_KEY || 'YOUR_PRIVATE_KEY').replace(/\\n/g, '\n');
+const FIREBASE_DB_URL = process.env.FIREBASE_DB_URL;
+const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
+const FIREBASE_CLIENT_EMAIL = process.env.FIREBASE_CLIENT_EMAIL;
+const FIREBASE_PRIVATE_KEY = process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : null;
 
-// Khởi tạo kết nối Firebase
-if (!admin.apps.length && FIREBASE_PROJECT_ID !== 'YOUR_PROJECT_ID') {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: FIREBASE_PROJECT_ID,
-      clientEmail: FIREBASE_CLIENT_EMAIL,
-      privateKey: FIREBASE_PRIVATE_KEY
-    }),
-    databaseURL: FIREBASE_DB_URL
-  });
+// Khởi tạo kết nối Firebase (Nếu có cấu hình)
+if (FIREBASE_PROJECT_ID && FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: FIREBASE_PROJECT_ID,
+        clientEmail: FIREBASE_CLIENT_EMAIL,
+        privateKey: FIREBASE_PRIVATE_KEY
+      }),
+      databaseURL: FIREBASE_DB_URL
+    });
+    console.log('✅ Đã kết nối Firebase thành công!');
+  } catch (e) {
+    console.error('⚠️ Lỗi khởi tạo Firebase:', e.message);
+  }
 }
+
 const db = admin.apps.length ? admin.database() : null;
 
-// Hàm hỗ trợ đồng bộ dữ liệu phiên điểm danh lên Firebase
 async function syncToFirebase(guildId, session) {
   if (!db || !guildId) return;
   try {
     await db.ref(`guilds/${guildId}`).set(session);
-    console.log(`✅ Đã đồng bộ phiên ${session.id} lên Web thành công!`);
+    console.log(`✅ Đồng bộ phiên ${session.id} lên Firebase!`);
   } catch (err) {
-    console.error('Lỗi khi đồng bộ dữ liệu lên Firebase:', err);
+    console.error('Lỗi sync Firebase:', err);
   }
 }
 
@@ -73,15 +77,11 @@ const client = new Client({
 
 const activeSessions = new Map();
 
-process.on('unhandledRejection', (error) => console.error('Hệ thống bắt Unhandled Rejection:', error));
-process.on('uncaughtException', (error) => console.error('Hệ thống bắt Uncaught Exception:', error));
-
-function buildSessionJSON(session) {
-  return JSON.stringify(session, null, 2);
-}
+process.on('unhandledRejection', (error) => console.error('Unhandled Rejection:', error));
+process.on('uncaughtException', (error) => console.error('Uncaught Exception:', error));
 
 function createJSONAttachment(session) {
-  const jsonString = buildSessionJSON(session);
+  const jsonString = JSON.stringify(session, null, 2);
   return new AttachmentBuilder(Buffer.from(jsonString, 'utf-8'), {
     name: `vote_scrim_${session.id || Date.now()}.json`
   });
@@ -129,7 +129,7 @@ function buildSummaryEmbed(session) {
     .setTitle(`📊 TỔNG KẾT ĐIỂM DANH: ${session.title}`)
     .setThumbnail(BANNER_IMAGE)
     .setColor('#00FF66')
-    .setDescription(`🔒 **Phiên điểm danh đã chính thức khép lại!**\nThống kê tổng hợp số lượng đệ tử các môn phái tham gia:`)
+    .setDescription(`🔒 **Phiên điểm danh đã chính thức khép lại!**`)
     .addFields(
       { name: '👥 Tổng người tham gia', value: `**${total}** thành viên`, inline: true },
       { name: '⚠️ Tổng số báo bận', value: `**${session.busyList?.length || 0}** người`, inline: true }
@@ -140,14 +140,14 @@ function buildSummaryEmbed(session) {
     return `${getEmojiString(c.emoji)} **${c.name}**: \`${count}\` đệ tử`;
   }).join('\n');
 
-  embed.addFields({ name: '⚔️ Phân chia lực lượng môn phái', value: classSummaryText, inline: false });
+  embed.addFields({ name: '⚔️ Phân chia môn phái', value: classSummaryText, inline: false });
 
   if (session.busyList?.length > 0) {
     const busySummary = session.busyList.map((b, i) => `${i + 1}. <@${b.userId}> (${b.ingame}) - Lý do: *${b.reason}*`).join('\n');
-    embed.addFields({ name: '📝 Danh sách báo bận chi tiết', value: busySummary, inline: false });
+    embed.addFields({ name: '📝 Danh sách báo bận', value: busySummary, inline: false });
   }
 
-  embed.setFooter({ text: `Hoàn tất tổng kết lúc: ${new Date().toLocaleTimeString('vi-VN')}` });
+  embed.setFooter({ text: `Hoàn tất lúc: ${new Date().toLocaleTimeString('vi-VN')}` });
   return embed;
 }
 
@@ -188,11 +188,10 @@ function buildComponents(isOpen = true) {
 }
 
 client.on(Events.ClientReady, async () => {
-  console.log(`🤖 Bot đã khởi động với tên: ${client.user.tag}`);
+  console.log(`🤖 Bot đã chạy: ${client.user.tag}`);
   const rest = new REST({ version: '10' }).setToken(TOKEN);
 
   try {
-    await rest.put(Routes.applicationCommands(client.application.id), { body: [] });
     await rest.put(Routes.applicationCommands(client.application.id), {
       body: [
         new SlashCommandBuilder()
@@ -211,59 +210,56 @@ client.on(Events.ClientReady, async () => {
 
 client.on(Events.InteractionCreate, async (interaction) => {
   try {
-    if (interaction.isChatInputCommand()) {
-      if (interaction.commandName === 'tao-phien') {
-        const title = interaction.options.getString('ten');
-        const hours = interaction.options.getNumber('gio');
-        const channel = interaction.options.getChannel('kenh') || interaction.channel;
+    if (interaction.isChatInputCommand() && interaction.commandName === 'tao-phien') {
+      const title = interaction.options.getString('ten');
+      const hours = interaction.options.getNumber('gio');
+      const channel = interaction.options.getChannel('kenh') || interaction.channel;
 
-        await interaction.reply({ content: `⏳ Đang tạo phiên điểm danh...`, ephemeral: true });
+      await interaction.reply({ content: `⏳ Đang tạo phiên điểm danh...`, ephemeral: true });
 
-        const expiresAt = hours ? Date.now() + (hours * 3600 * 1000) : null;
-        const session = {
-          id: Date.now().toString(),
-          creatorId: interaction.user.id,
-          title,
-          isOpen: true,
-          expiresAt,
-          members: {},
-          busyList: []
-        };
-        CLASSES.forEach(c => session.members[c.id] = []);
+      const expiresAt = hours ? Date.now() + (hours * 3600 * 1000) : null;
+      const session = {
+        id: Date.now().toString(),
+        creatorId: interaction.user.id,
+        title,
+        isOpen: true,
+        expiresAt,
+        members: {},
+        busyList: []
+      };
+      CLASSES.forEach(c => session.members[c.id] = []);
 
-        const sentMsg = await channel.send({
-          embeds: [buildEmbed(session)],
-          components: buildComponents(true)
-        });
+      const sentMsg = await channel.send({
+        embeds: [buildEmbed(session)],
+        components: buildComponents(true)
+      });
 
-        session.messageId = sentMsg.id;
-        activeSessions.set(sentMsg.id, session);
-        await syncToFirebase(interaction.guildId, session);
+      session.messageId = sentMsg.id;
+      activeSessions.set(sentMsg.id, session);
+      await syncToFirebase(interaction.guildId, session);
 
-        await interaction.editReply({ content: `✅ Đã tạo bảng điểm danh thành công tại <#${channel.id}>!` });
+      await interaction.editReply({ content: `✅ Đã tạo bảng tại <#${channel.id}>!` });
 
-        if (expiresAt) {
-          setTimeout(async () => {
-            if (session.isOpen) {
-              session.isOpen = false;
-              await syncToFirebase(interaction.guildId, session);
-              try {
-                const msg = await channel.messages.fetch(sentMsg.id);
-                if (msg) {
-                  await msg.edit({ content: '⏰ **Phiên điểm danh đã tự động ĐÓNG!**', embeds: [buildEmbed(session)], components: buildComponents(false) });
-                  const jsonAttachment = createJSONAttachment(session);
-                  await channel.send({ 
-                    content: '📄 **Dữ liệu điểm danh dạng JSON:**',
-                    embeds: [buildSummaryEmbed(session)], 
-                    files: [jsonAttachment] 
-                  });
-                }
-              } catch (err) {}
-            }
-          }, hours * 3600 * 1000);
-        }
-        return;
+      if (expiresAt) {
+        setTimeout(async () => {
+          if (session.isOpen) {
+            session.isOpen = false;
+            await syncToFirebase(interaction.guildId, session);
+            try {
+              const msg = await channel.messages.fetch(sentMsg.id);
+              if (msg) {
+                await msg.edit({ content: '⏰ **Phiên điểm danh đã ĐÓNG!**', embeds: [buildEmbed(session)], components: buildComponents(false) });
+                await channel.send({ 
+                  content: '📄 **Dữ liệu điểm danh JSON:**',
+                  embeds: [buildSummaryEmbed(session)], 
+                  files: [createJSONAttachment(session)] 
+                });
+              }
+            } catch (err) {}
+          }
+        }, hours * 3600 * 1000);
       }
+      return;
     }
 
     if (interaction.isButton() || interaction.isModalSubmit()) {
@@ -271,58 +267,27 @@ client.on(Events.InteractionCreate, async (interaction) => {
       let session = activeSessions.get(msgId);
 
       if (interaction.isButton() && interaction.customId === 'a_admin') {
-        if (!session) return await interaction.reply({ content: '⚠️ Dữ liệu phiên không tồn tại trên bộ nhớ tạm!', ephemeral: true });
+        if (!session) return await interaction.reply({ content: '⚠️ Bộ nhớ tạm không tìm thấy phiên!', ephemeral: true });
 
         const isOwner = session.creatorId === interaction.user.id;
         const isServerOwner = interaction.guild?.ownerId === interaction.user.id;
         const isAdmin = interaction.memberPermissions?.has(PermissionsBitField.Flags.Administrator);
-        const hasManagerRole = interaction.member?.roles?.cache.some(r => 
-          ['điều phối', 'quản lý', 'quản lí', 'dieu phoi', 'quan ly'].includes(r.name.toLowerCase())
-        );
 
-        if (!isOwner && !isServerOwner && !isAdmin && !hasManagerRole) {
-          return await interaction.reply({ 
-            content: '🚫 **Chỉ Chủ Server, Người Tạo Phiên, Điều Phối hoặc Quản Lý mới có thể mở menu này!**', 
-            ephemeral: true 
-          });
+        if (!isOwner && !isServerOwner && !isAdmin) {
+          return await interaction.reply({ content: '🚫 Chỉ Admin/Người tạo phiên mới dùng được!', ephemeral: true });
         }
 
         const adminRow = new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId('adm_close').setLabel('Đóng Phiên').setEmoji('🛑').setStyle(ButtonStyle.Danger),
-          new ButtonBuilder().setCustomId('adm_edit').setLabel('Đổi Tên').setEmoji('✏️').setStyle(ButtonStyle.Primary),
-          new ButtonBuilder().setCustomId('adm_export_json').setLabel('Xuất JSON').setEmoji('📄').setStyle(ButtonStyle.Success),
-          new ButtonBuilder().setCustomId('adm_export_giveaway').setLabel('Xuất Giveaway').setEmoji('🎲').setStyle(ButtonStyle.Secondary)
+          new ButtonBuilder().setCustomId('adm_export_json').setLabel('Xuất JSON').setEmoji('📄').setStyle(ButtonStyle.Success)
         );
-        return await interaction.reply({ content: '🛠️ **Bảng điều khiển admin:**', components: [adminRow], ephemeral: true });
-      }
-
-      if (interaction.isButton() && interaction.customId === 'adm_export_giveaway') {
-        const parentMsg = interaction.message.reference?.messageId;
-        const targetSession = activeSessions.get(parentMsg) || session;
-
-        if (!targetSession) return await interaction.reply({ content: '⚠️ Không tìm thấy dữ liệu phiên này!', ephemeral: true });
-
-        let giveawayList = [];
-        CLASSES.forEach(c => {
-          (targetSession.members?.[c.id] || []).forEach(m => giveawayList.push(`${m.name} (<@${m.userId}>)`));
-        });
-
-        if (giveawayList.length === 0) return await interaction.reply({ content: '⚠️ Chưa có thành viên nào đăng ký!', ephemeral: true });
-
-        const formattedList = giveawayList.map((item, index) => `${index + 1}.${item}`).join('\n');
-        const txtFile = new AttachmentBuilder(Buffer.from(formattedList, 'utf-8'), { name: `giveaway_list_${targetSession.id}.txt` });
-
-        return await interaction.reply({
-          content: `🎉 **DANH SÁCH GIVEAWAY (${giveawayList.length} người):**\n\`\`\`text\n${formattedList.substring(0, 1800)}\n\`\`\``,
-          files: [txtFile],
-          ephemeral: true
-        });
+        return await interaction.reply({ content: '🛠️ **Menu Admin:**', components: [adminRow], ephemeral: true });
       }
 
       if (interaction.isButton() && interaction.customId === 'adm_export_json') {
         const parentMsg = interaction.message.reference?.messageId;
         const targetSession = activeSessions.get(parentMsg) || session;
-        if (!targetSession) return await interaction.reply({ content: '⚠️ Không tìm thấy dữ liệu phiên!', ephemeral: true });
+        if (!targetSession) return await interaction.reply({ content: '⚠️ Dữ liệu không tồn tại!', ephemeral: true });
 
         return await interaction.reply({
           content: '📁 **Dữ liệu JSON:**',
@@ -341,51 +306,33 @@ client.on(Events.InteractionCreate, async (interaction) => {
           try {
             const msg = await interaction.channel.messages.fetch(targetSession.messageId);
             if (msg) {
-              await msg.edit({ content: '🛑 **Phiên điểm danh đã được ĐÓNG!**', embeds: [buildEmbed(targetSession)], components: buildComponents(false) });
+              await msg.edit({ content: '🛑 **Phiên điểm danh đã ĐÓNG!**', embeds: [buildEmbed(targetSession)], components: buildComponents(false) });
             }
             await interaction.channel.send({ 
-              content: '📄 **Dữ liệu điểm danh dạng JSON:**',
+              content: '📄 **Dữ liệu điểm danh JSON:**',
               embeds: [buildSummaryEmbed(targetSession)], 
               files: [createJSONAttachment(targetSession)] 
             });
           } catch (e) {}
         }
-        return await interaction.reply({ content: '🛑 Đã đóng phiên!', ephemeral: true });
+        return await interaction.reply({ content: '🛑 Đã đóng phiên thành công!', ephemeral: true });
       }
 
-      if (interaction.isButton() && interaction.customId === 'adm_edit') {
-        const modal = new ModalBuilder()
-          .setCustomId('modal_edit')
-          .setTitle('Đổi tên phiên điểm danh')
-          .addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('new_title').setLabel('Tên mới').setStyle(TextInputStyle.Short).setRequired(true)));
-        return await interaction.showModal(modal);
-      }
-
-      if (interaction.isModalSubmit() && interaction.customId === 'modal_edit') {
-        await interaction.deferUpdate().catch(() => {});
-        if (session) {
-          session.title = interaction.fields.getTextInputValue('new_title');
-          await syncToFirebase(interaction.guildId, session);
-          try { await interaction.message.edit({ embeds: [buildEmbed(session)] }); } catch (e) {}
-        }
-        return await interaction.followUp({ content: '✅ Đã cập nhật tên phiên!', ephemeral: true });
-      }
-
-      if (session && !session.isOpen) return await interaction.reply({ content: '🔴 Phiên đã kết thúc!', ephemeral: true });
+      if (session && !session.isOpen) return await interaction.reply({ content: '🔴 Phiên đã đóng!', ephemeral: true });
 
       if (interaction.isButton() && interaction.customId.startsWith('c_')) {
         const classId = interaction.customId.replace('c_', '');
         const modal = new ModalBuilder()
           .setCustomId(`m_join_${classId}`)
           .setTitle('Điểm Danh Môn Phái')
-          .addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('ingame').setLabel('Tên nhân vật (In-game)').setStyle(TextInputStyle.Short).setRequired(true)));
+          .addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('ingame').setLabel('Tên In-game').setStyle(TextInputStyle.Short).setRequired(true)));
         return await interaction.showModal(modal);
       }
 
       if (interaction.isModalSubmit() && interaction.customId.startsWith('m_join_')) {
         await interaction.deferUpdate().catch(() => {});
         const classId = interaction.customId.replace('m_join_', '');
-        if (!session || !session.isOpen) return await interaction.followUp({ content: '⚠️ Phiên đã đóng!', ephemeral: true });
+        if (!session || !session.isOpen) return;
 
         const ingame = interaction.fields.getTextInputValue('ingame');
 
@@ -399,7 +346,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
         await syncToFirebase(interaction.guildId, session);
         try { await interaction.message.edit({ embeds: [buildEmbed(session)] }); } catch (e) {}
-        return await interaction.followUp({ content: `✅ Đã ghi nhận điểm danh!`, ephemeral: true });
+        return await interaction.followUp({ content: `✅ Đã báo danh!`, ephemeral: true });
       }
 
       if (interaction.isButton() && interaction.customId === 'a_busy') {
@@ -415,7 +362,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       if (interaction.isModalSubmit() && interaction.customId === 'm_busy') {
         await interaction.deferUpdate().catch(() => {});
-        if (!session || !session.isOpen) return await interaction.followUp({ content: '⚠️ Phiên đã đóng!', ephemeral: true });
+        if (!session || !session.isOpen) return;
 
         const ingame = interaction.fields.getTextInputValue('ingame');
         const reason = interaction.fields.getTextInputValue('reason');
@@ -437,7 +384,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         session.busyList = session.busyList.filter(b => b.userId !== interaction.user.id);
         await syncToFirebase(interaction.guildId, session);
         try { await interaction.message.edit({ embeds: [buildEmbed(session)] }); } catch (e) {}
-        return await interaction.followUp({ content: '🗑️ Đã xóa thông tin báo bận!', ephemeral: true });
+        return await interaction.followUp({ content: '🗑️️ Đã xóa báo bận!', ephemeral: true });
       }
 
       if (interaction.isButton() && interaction.customId === 'a_cancel') {
@@ -450,11 +397,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
         session.busyList = session.busyList.filter(b => b.userId !== interaction.user.id);
         await syncToFirebase(interaction.guildId, session);
         try { await interaction.message.edit({ embeds: [buildEmbed(session)] }); } catch (e) {}
-        return await interaction.followUp({ content: '❌ Đã hủy đăng ký điểm danh!', ephemeral: true });
+        return await interaction.followUp({ content: '❌ Đã hủy đăng ký!', ephemeral: true });
       }
     }
   } catch (err) {
-    console.error('Lỗi khi xử lý Interaction:', err);
+    console.error('Lỗi Interaction:', err);
   }
 });
 
