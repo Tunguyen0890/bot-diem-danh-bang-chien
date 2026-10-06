@@ -193,7 +193,7 @@ function getCouplePercentage(userId1, userId2) {
   return Math.abs(hash) % 101;
 }
 
-function createProgressBar(percent, emoji = '🏳️‍🌈') {
+function createProgressBar(percent, emoji = '🏳️️‍🌈') {
   const total = 10;
   const progress = Math.round((percent / 100) * total);
   const empty = total - progress;
@@ -690,7 +690,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       if (interaction.isModalSubmit() && interaction.customId === 'm_busy') {
         await interaction.deferUpdate().catch(() => {});
-        if (!session || !session.isOpen) return await interaction.followUp({ content: '⚠️ Phiên đã đóng!', ephemeral: true });
+        if (!session || !session.isOpen) return await interaction.followUp({ content: '⚠️️ Phiên đã đóng!', ephemeral: true });
 
         const ingame = interaction.fields.getTextInputValue('ingame');
         const reason = interaction.fields.getTextInputValue('reason');
@@ -738,6 +738,90 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   } catch (err) {
     console.error('Lỗi khi xử lý Interaction:', err);
+  }
+});
+
+// ====================================================================
+// BỔ SUNG: TỰ ĐỘNG HIỆN TẤT CẢ NGƯỜI THAM GIA VÀ BÁO BẬN KHI KẾT THÚC PHIÊN
+// ====================================================================
+
+/**
+ * Hàm tạo Embed hiển thị toàn bộ danh sách chi tiết
+ * bao gồm đầy đủ tất cả thành viên đăng ký theo từng môn phái và danh sách báo bận.
+ */
+function buildFullParticipantsEmbed(session) {
+  let totalParticipants = 0;
+  CLASSES.forEach(c => totalParticipants += (session.members?.[c.id]?.length || 0));
+
+  const embed = new EmbedBuilder()
+    .setTitle(`📋 DANH SÁCH CHI TIẾT THÀNH VIÊN: ${session.title}`)
+    .setThumbnail(BANNER_IMAGE)
+    .setColor('#FF9900')
+    .setDescription(`📢 **Phiên điểm danh đã kết thúc!**\nDưới đây là danh sách toàn bộ thành viên tham gia chia theo môn phái và những người báo bận:`)
+    .addFields(
+      { name: '👥 Tổng tham gia', value: `**${totalParticipants}** người`, inline: true },
+      { name: '⚠️ Tổng báo bận', value: `**${session.busyList?.length || 0}** người`, inline: true },
+      { name: '\u200B', value: '─────────────────────────────', inline: false }
+    );
+
+  // Lặp qua từng môn phái và liệt kê toàn bộ người tham gia
+  CLASSES.forEach(c => {
+    const list = session.members?.[c.id] || [];
+    let text = '*Chưa có ai đăng ký*';
+    if (list.length > 0) {
+      text = list.map((m, i) => `${i + 1}. <@${m.userId}> | Ingame: **${m.name}**`).join('\n');
+    }
+    embed.addFields({ 
+      name: `${getEmojiString(c.emoji)} ${c.name} (${list.length} người)`, 
+      value: text, 
+      inline: false 
+    });
+  });
+
+  // Hiển thị danh sách bận nếu có
+  if (session.busyList?.length > 0) {
+    const busyText = session.busyList.map((b, i) => `${i + 1}. <@${b.userId}> | Ingame: **${b.ingame}** — Lý do: *${b.reason}*`).join('\n');
+    embed.addFields({ 
+      name: `⚠️ DANH SÁCH BÁO BẬN (${session.busyList.length} người)`, 
+      value: busyText, 
+      inline: false 
+    });
+  } else {
+    embed.addFields({ 
+      name: '⚠️ DANH SÁCH BÁO BẬN', 
+      value: '*Không có ai báo bận*', 
+      inline: false 
+    });
+  }
+
+  embed.setFooter({ text: `Xuất danh sách lúc: ${new Date().toLocaleTimeString('vi-VN')}` });
+  return embed;
+}
+
+/**
+ * Lắng nghe sự kiện cập nhật tin nhắn.
+ * Khi tin nhắn bảng điểm danh được chỉnh sửa sang trạng thái đóng/kết thúc phiên
+ * (do Hết giờ tự động hoặc do Admin chủ động Đóng phiên),
+ * bot sẽ tự động gửi Embed danh sách chi tiết tất cả người tham gia & báo bận.
+ */
+client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
+  try {
+    if (!newMessage || !newMessage.id) return;
+    const session = activeSessions.get(newMessage.id);
+    if (!session) return;
+
+    // Kiểm tra nếu phiên vừa chuyển từ isOpen = true sang isOpen = false
+    if (!session.isOpen && !session._fullListSent) {
+      session._fullListSent = true; // Đánh dấu đã gửi để tránh lặp lại
+
+      const fullEmbed = buildFullParticipantsEmbed(session);
+      await newMessage.channel.send({
+        content: `🔔 **BÁO CÁO CHI TIẾT THÀNH VIÊN THAM GIA & BÁO BẬN KHÉP LẠI PHIÊN:**`,
+        embeds: [fullEmbed]
+      });
+    }
+  } catch (err) {
+    console.error('Lỗi khi gửi danh sách chi tiết khi kết thúc phiên:', err);
   }
 });
 
