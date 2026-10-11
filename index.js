@@ -17,16 +17,13 @@ const {
   AttachmentBuilder
 } = require('discord.js');
 const { DisTube } = require('distube');
-const { SpotifyPlugin } = require('@distube/spotify');
-const { SoundCloudPlugin } = require('@distube/soundcloud');
 const { YtDlpPlugin } = require('@distube/yt-dlp');
 
-// ⚠️ Bot sử dụng Process Environment Variable TOKEN[span_1](start_span)[span_1](end_span)
+// ⚠️ Bot sử dụng Process Environment Variable TOKEN
 const TOKEN = process.env.TOKEN || 'YOUR_BOT_TOKEN_HERE';
 
 const BANNER_IMAGE = 'https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Z2eDFwZXRyNWJ1aGhybnMwbWN5OHAwMmdtbHJvMHFvMm5mMnF0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/L2XhHcmM55533fYnmA/giphy.gif';
 
-// 💡 Điền ID Emoji Discord của bạn vào đây (Ví dụ: '123456789012345678')[span_2](start_span)[span_2](end_span)
 const CLASSES = [
   { id: 'culinh', name: 'Cửu Linh', emoji: '1540995232848420926' },
   { id: 'thantuong', name: 'Thần Tướng', emoji: '1540995230877097984' },
@@ -37,7 +34,6 @@ const CLASSES = [
   { id: 'huyetha', name: 'Huyết Hà', emoji: '1540995238909321327' }
 ];
 
-// GIF Anime Minh Họa cho từng lệnh Check[span_3](start_span)[span_3](end_span)
 const CHECK_IMAGES = {
   gay: 'https://media.giphy.com/media/26gspjl5bxzhxoBWw/giphy.gif',
   les: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHYyOXhyNm1iZ3VreGtkbmdyNnk5ejFudGtrZTRldXlsNjcxMHVndyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0IybQ6l8J454o52w/giphy.gif',
@@ -47,92 +43,28 @@ const CHECK_IMAGES = {
   saygex: 'https://media.giphy.com/media/3o7TKzb326hYin7JFS/giphy.gif'
 };
 
-// Dữ liệu GIF & Nhận xét bựa tục cho từng mốc hợp nhau (0% -> 100%)[span_4](start_span)[span_4](end_span)
 const COMPATIBILITY_DATA = {
-  0: {
-    gif: 'https://media.giphy.com/media/l1J9u3TZfpmeDLkD6/giphy.gif',
-    comment: 'Khác đéo gì chó với mèo! Nhìn mặt nhau thôi là muốn đấm vỡ mồm đối phương rồi!'
-  },
-  5: {
-    gif: 'https://media.giphy.com/media/3o6ZtaO9BZHcOjmErm/giphy.gif',
-    comment: 'Mối quan hệ hãm lìn! Ở gần nhau 5 phút là có đứa vô viện gắp mảnh thủy tinh.'
-  },
-  10: {
-    gif: 'https://media.giphy.com/media/xT1R9Y42B4X95F77X2/giphy.gif',
-    comment: 'Như nước với lửa. Hợp nhau đúng cái khoản chửi thề với ném đồ vào mặt nhau!'
-  },
-  15: {
-    gif: 'https://media.giphy.com/media/3o7527pa7qs9kCG78A/giphy.gif',
-    comment: 'Oan gia ngõ hẹp! Bước ra đường gặp nhau là muốn xui xẻo cả ngày rồi.'
-  },
-  20: {
-    gif: 'https://media.giphy.com/media/l3q2kXN3pT6GflN6M/giphy.gif',
-    comment: 'Mức độ hợp nhau bằng đúng chiều cao suy nghĩ của mấy đứa trẻ trâu. Nhạt như nước ốc!'
-  },
-  25: {
-    gif: 'https://media.giphy.com/media/26ueYUlFBSuT0Xo4w/giphy.gif',
-    comment: 'Có tí tương tác đấy, nhưng là kiểu "tao coi mày như con nợ, còn mày coi tao như rác".'
-  },
-  30: {
-    gif: 'https://media.giphy.com/media/l0HlCqV35hdEG2GUo/giphy.gif',
-    comment: 'Cũng tàm tạm, vừa đủ để làm bạn xã giao trên bàn nhậu, say lên là móc mỉa nhau tiếp.'
-  },
-  35: {
-    gif: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif',
-    comment: 'Hợp nhau khoản ăn uống, nhưng đụng tới tiền bạc hay tình cảm là "mày là ai tao đéo biết".'
-  },
-  40: {
-    gif: 'https://media.giphy.com/media/3o6Zt481isNVuQI1l6/giphy.gif',
-    comment: 'Mức độ trung bình kém. Thỉnh thoảng dở dở dở điên điên lại thấy đối phương cũng đáng yêu.'
-  },
-  45: {
-    gif: 'https://media.giphy.com/media/xT0xeJpnrWC4XWblEk/giphy.gif',
-    comment: 'Sắp tới ngưỡng bạn thân rồi đấy, nhưng vẫn còn hơi gượng gạo, chưa dám cởi quần đè nhau ra đâu.'
-  },
-  50: {
-    gif: 'https://media.giphy.com/media/l0ErD3Z4f35VobIzS/giphy.gif',
-    comment: 'Nửa sống nửa chín! Nửa muốn làm tri kỷ, nửa muốn táng cho phát vào đầu cho đỡ ngứa mắt.'
-  },
-  55: {
-    gif: 'https://media.giphy.com/media/xT9IgG5083mTnCHDjm/giphy.gif',
-    comment: 'Trên tình bạn dưới tình yêu, nhưng trên hết là tình đồng dâm! Bắt đầu thấy hợp cạ rồi đấy.'
-  },
-  60: {
-    gif: 'https://media.giphy.com/media/26gspjl5bxzhxoBWw/giphy.gif',
-    comment: 'Khá hợp! Đi cà phê bốc phét cả ngày không chán, tối về nhắn tin chửi nhau tiếp.'
-  },
-  65: {
-    gif: 'https://media.giphy.com/media/3o7TKzb326hYin7JFS/giphy.gif',
-    comment: 'Mùi dâm khí bốc lên rồi! Nhìn nhau thôi cũng biết trong đầu đứa kia đang nghĩ trò bựa gì.'
-  },
-  70: {
-    gif: 'https://media.giphy.com/media/l0IybQ6l8J454o52w/giphy.gif',
-    comment: 'Hợp nhau như tay với đít! Rủ nhau đi quậy phá là bao chuẩn, đéo ai cản nổi.'
-  },
-  75: {
-    gif: 'https://media.giphy.com/media/dJe8wgptDLAv9Re78T/giphy.gif',
-    comment: 'Tri kỷ cmnr! Bắt sóng thần tốc, đứa xướng đứa họa làm cõi mạng điên đảo.'
-  },
-  80: {
-    gif: 'https://media.giphy.com/media/6vE3Y7KE6ss8M/giphy.gif',
-    comment: 'Duyên nợ truyền kiếp! Kiếp trước chắc tính sổ chung tiền nhà trọ nên kiếp này dính như gớm.'
-  },
-  85: {
-    gif: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif',
-    comment: 'Quá hợp luôn! Sinh ra là để dành cho nhau, không làm người yêu thì cũng làm cặp bài trùng quấy đục nước!'
-  },
-  90: {
-    gif: 'https://media.giphy.com/media/l0HlTy9x8K53EQD9S/giphy.gif',
-    comment: 'Trời sinh một cặp, đất sinh một đôi! Chỉ cần cái nháy mắt là cởi đồ... à nhầm, cởi mở lòng ngay!'
-  },
-  95: {
-    gif: 'https://media.giphy.com/media/26vUt9Y74pB6TqG0E/giphy.gif',
-    comment: 'Cực phẩm tâm giao! Hợp từ tính cách đến cái nết bựa tục, tách ra là trái đất chao đảo liền!'
-  },
-  100: {
-    gif: 'https://media.giphy.com/media/L2XhHcmM55533fYnmA/giphy.gif',
-    comment: 'TUYỆT PHỐI THIÊN HẠ! Đôi lứa xứng đôi, đéo còn từ nào để tả! Cưới ngay đi kẻo thằng khác nó hốt!'
-  }
+  0: { gif: 'https://media.giphy.com/media/l1J9u3TZfpmeDLkD6/giphy.gif', comment: 'Khác đéo gì chó với mèo! Nhìn mặt nhau thôi là muốn đấm vỡ mồm đối phương rồi!' },
+  5: { gif: 'https://media.giphy.com/media/3o6ZtaO9BZHcOjmErm/giphy.gif', comment: 'Mối quan hệ hãm lìn! Ở gần nhau 5 phút là có đứa vô viện gắp mảnh thủy tinh.' },
+  10: { gif: 'https://media.giphy.com/media/xT1R9Y42B4X95F77X2/giphy.gif', comment: 'Như nước với lửa. Hợp nhau đúng cái khoản chửi thề với ném đồ vào mặt nhau!' },
+  15: { gif: 'https://media.giphy.com/media/3o7527pa7qs9kCG78A/giphy.gif', comment: 'Oan gia ngõ hẹp! Bước ra đường gặp nhau là muốn xui xẻo cả ngày rồi.' },
+  20: { gif: 'https://media.giphy.com/media/l3q2kXN3pT6GflN6M/giphy.gif', comment: 'Mức độ hợp nhau bằng đúng chiều cao suy nghĩ của mấy đứa trẻ trâu. Nhạt như nước ốc!' },
+  25: { gif: 'https://media.giphy.com/media/26ueYUlFBSuT0Xo4w/giphy.gif', comment: 'Có tí tương tác đấy, nhưng là kiểu "tao coi mày như con nợ, còn mày coi tao như rác".' },
+  30: { gif: 'https://media.giphy.com/media/l0HlCqV35hdEG2GUo/giphy.gif', comment: 'Cũng tàm tạm, vừa đủ để làm bạn xã giao trên bàn nhậu, say lên là móc mỉa nhau tiếp.' },
+  35: { gif: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif', comment: 'Hợp nhau khoản ăn uống, nhưng đụng tới tiền bạc hay tình cảm là "mày là ai tao đéo biết".' },
+  40: { gif: 'https://media.giphy.com/media/3o6Zt481isNVuQI1l6/giphy.gif', comment: 'Mức độ trung bình kém. Thỉnh thoảng dở dở dở điên điên lại thấy đối phương cũng đáng yêu.' },
+  45: { gif: 'https://media.giphy.com/media/xT0xeJpnrWC4XWblEk/giphy.gif', comment: 'Sắp tới ngưỡng bạn thân rồi đấy, nhưng vẫn còn hơi gượng gạo, chưa dám cởi quần đè nhau ra đâu.' },
+  50: { gif: 'https://media.giphy.com/media/l0ErD3Z4f35VobIzS/giphy.gif', comment: 'Nửa sống nửa chín! Nửa muốn làm tri kỷ, nửa muốn táng cho phát vào đầu cho đỡ ngứa mắt.' },
+  55: { gif: 'https://media.giphy.com/media/xT9IgG5083mTnCHDjm/giphy.gif', comment: 'Trên tình bạn dưới tình yêu, nhưng trên hết là tình đồng dâm! Bắt đầu thấy hợp cạ rồi đấy.' },
+  60: { gif: 'https://media.giphy.com/media/26gspjl5bxzhxoBWw/giphy.gif', comment: 'Khá hợp! Đi cà phê bốc phét cả ngày không chán, tối về nhắn tin chửi nhau tiếp.' },
+  65: { gif: 'https://media.giphy.com/media/3o7TKzb326hYin7JFS/giphy.gif', comment: 'Mùi dâm khí bốc lên rồi! Nhìn nhau thôi cũng biết trong đầu đứa kia đang nghĩ trò bựa gì.' },
+  70: { gif: 'https://media.giphy.com/media/l0IybQ6l8J454o52w/giphy.gif', comment: 'Hợp nhau như tay với đít! Rủ nhau đi quậy phá là bao chuẩn, đéo ai cản nổi.' },
+  75: { gif: 'https://media.giphy.com/media/dJe8wgptDLAv9Re78T/giphy.gif', comment: 'Tri kỷ cmnr! Bắt sóng thần tốc, đứa xướng đứa họa làm cõi mạng điên đảo.' },
+  80: { gif: 'https://media.giphy.com/media/6vE3Y7KE6ss8M/giphy.gif', comment: 'Duyên nợ truyền kiếp! Kiếp trước chắc tính sổ chung tiền nhà trọ nên kiếp này dính như gớm.' },
+  85: { gif: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif', comment: 'Quá hợp luôn! Sinh ra là để dành cho nhau, không làm người yêu thì cũng làm cặp bài trùng quấy đục nước!' },
+  90: { gif: 'https://media.giphy.com/media/l0HlTy9x8K53EQD9S/giphy.gif', comment: 'Trời sinh một cặp, đất sinh một đôi! Chỉ cần cái nháy mắt là cởi đồ... à nhầm, cởi mở lòng ngay!' },
+  95: { gif: 'https://media.giphy.com/media/26vUt9Y74pB6TqG0E/giphy.gif', comment: 'Cực phẩm tâm giao! Hợp từ tính cách đến cái nết bựa tục, tách ra là trái đất chao đảo liền!' },
+  100: { gif: 'https://media.giphy.com/media/L2XhHcmM55533fYnmA/giphy.gif', comment: 'TUYỆT PHỐI THIÊN HẠ! Đôi lứa xứng đôi, đéo còn từ nào để tả! Cưới ngay đi kẻo thằng khác nó hốt!' }
 };
 
 const client = new Client({
@@ -144,17 +76,13 @@ const client = new Client({
   ]
 });
 
-// Cấu hình DisTube Music Player giống Jokie
+// Cấu hình DisTube đơn giản, không bị lỗi module
 const distube = new DisTube(client, {
   emitNewSongOnly: true,
   leaveOnEmpty: true,
   leaveOnFinish: false,
   leaveOnStop: true,
-  plugins: [
-    new SpotifyPlugin(),
-    new SoundCloudPlugin(),
-    new YtDlpPlugin()
-  ]
+  plugins: [new YtDlpPlugin()]
 });
 
 const activeSessions = new Map();
@@ -162,7 +90,6 @@ const activeSessions = new Map();
 process.on('unhandledRejection', (error) => console.error('Hệ thống bắt Unhandled Rejection:', error));
 process.on('uncaughtException', (error) => console.error('Hệ thống bắt Uncaught Exception:', error));
 
-// Hàm xuất dữ liệu phiên điểm danh ra chuỗi JSON[span_5](start_span)[span_5](end_span)
 function buildSessionJSON(session) {
   const jsonOutput = {
     session_id: session.id,
@@ -177,7 +104,6 @@ function buildSessionJSON(session) {
   return JSON.stringify(jsonOutput, null, 2);
 }
 
-// Hàm tạo Attachment File JSON để gửi vào kênh[span_6](start_span)[span_6](end_span)
 function createJSONAttachment(session) {
   const jsonString = buildSessionJSON(session);
   return new AttachmentBuilder(Buffer.from(jsonString, 'utf-8'), {
@@ -185,13 +111,11 @@ function createJSONAttachment(session) {
   });
 }
 
-// Hàm hiển thị Emoji (ID hoặc Unicode) trên Embed[span_7](start_span)[span_7](end_span)
 function getEmojiString(emoji) {
   if (!emoji) return '⚔️';
   return /^\d+$/.test(emoji) ? `<:custom:${emoji}>` : emoji;
 }
 
-// Hàm tính % cố định dựa trên User ID[span_8](start_span)[span_8](end_span)
 function getPercentage(userId, type) {
   let hash = 0;
   const str = userId + type;
@@ -201,7 +125,6 @@ function getPercentage(userId, type) {
   return Math.abs(hash) % 101;
 }
 
-// Hàm tính % hợp nhau giữa 2 người dùng cố định[span_9](start_span)[span_9](end_span)
 function getCouplePercentage(userId1, userId2) {
   const sortedIds = [userId1, userId2].sort().join('_');
   let hash = 0;
@@ -218,13 +141,11 @@ function createProgressBar(percent, emoji = '🏳️‍🌈') {
   return `[${emoji.repeat(progress)}${'⬛'.repeat(empty)}] **${percent}%**`;
 }
 
-// Hàm lấy dữ liệu GIF và comment cho độ hợp nhau lùi về bội số của 5[span_10](start_span)[span_10](end_span)
 function getCompatibilityData(percent) {
   const rounded = Math.floor(percent / 5) * 5;
   return COMPATIBILITY_DATA[rounded] || COMPATIBILITY_DATA[0];
 }
 
-// Hàm trả về comment mặn mòi, bựa cho từng loại[span_11](start_span)[span_11](end_span)
 function getCheckComment(type, percent) {
   const comments = {
     gay: [
@@ -260,7 +181,7 @@ function getCheckComment(type, percent) {
     saygex: [
       { max: 15, text: 'Tâm hồn thanh tịnh, chưa bao giờ mơ thấy cảnh đấu kiếm.' },
       { max: 45, text: 'Bắt đầu có máu Say Gex trong người, hay liếc mông mấy thằng anh em.' },
-      { max: 75, text: 'Đam mê thông đít đấu kiếm nồng cháy! Thèm cảm giác mạnh dữ lắm rồi!' },
+      { max: 75, text: 'Đam đam thông đít đấu kiếm nồng cháy! Thèm cảm giác mạnh dữ lắm rồi!' },
       { max: 100, text: 'BẬC THẦY SAY GEX! Địch hay đệ cũng cởi quần ra đâm tuốt, né xa 10m!' }
     ]
   };
@@ -368,7 +289,7 @@ function buildComponents(isOpen = true) {
 }
 
 client.on(Events.ClientReady, async () => {
-  console.log(`🤖 Bot đã khởi động với tên: ${client.user.tag}[span_12](start_span)[span_12](end_span)`);
+  console.log(`🤖 Bot đã khởi động với tên: ${client.user.tag}`);
   const rest = new REST({ version: '10' }).setToken(TOKEN);
 
   const integrationTypes = [0, 1];
@@ -434,11 +355,10 @@ client.on(Events.ClientReady, async () => {
           .setIntegrationTypes(integrationTypes)
           .setContexts(contexts),
 
-        // 🎵 CÁC LỆNH PHÁT NHẠC GIỐNG CON JOKIE
         new SlashCommandBuilder()
           .setName('play')
-          .setDescription('Phát bài hát từ YouTube, Spotify hoặc SoundCloud')
-          .addStringOption(opt => opt.setName('query').setDescription('Tên bài hát hoặc đường dẫn (URL)').setRequired(true)),
+          .setDescription('Phát bài hát từ URL hoặc từ khóa tìm kiếm')
+          .addStringOption(opt => opt.setName('query').setDescription('Tên bài hát hoặc đường dẫn').setRequired(true)),
 
         new SlashCommandBuilder()
           .setName('skip')
@@ -446,28 +366,27 @@ client.on(Events.ClientReady, async () => {
 
         new SlashCommandBuilder()
           .setName('stop')
-          .setDescription('Dừng phát nhạc và đuổi bot khỏi phòng thoại'),
+          .setDescription('Dừng phát nhạc và rời kênh thoại'),
 
         new SlashCommandBuilder()
           .setName('queue')
-          .setDescription('Xem danh sách bài hát đang đợi'),
+          .setDescription('Xem danh sách chờ phát nhạc'),
 
         new SlashCommandBuilder()
           .setName('pause')
-          .setDescription('Tạm dừng phát nhạc'),
+          .setDescription('Tạm dừng nhạc'),
 
         new SlashCommandBuilder()
           .setName('resume')
           .setDescription('Tiếp tục phát nhạc')
       ]
     });
-    console.log('✅ Đã cập nhật xong hệ thống Slash Command[span_13](start_span)[span_13](end_span)!');
+    console.log('✅ Đã cập nhật xong hệ thống Slash Command!');
   } catch (e) {
-    console.error('Lỗi đăng ký Slash Command[span_14](start_span)[span_14](end_span):', e);
+    console.error('Lỗi đăng ký Slash Command:', e);
   }
 });
 
-// Sự kiện thông báo khi bot bắt đầu phát bài hát mới
 distube.on('playSong', (queue, song) => {
   queue.textChannel?.send(`🎶 Đang phát: **${song.name}** - \`${song.formattedDuration}\``);
 });
@@ -478,17 +397,15 @@ distube.on('addSong', (queue, song) => {
 
 client.on(Events.InteractionCreate, async (interaction) => {
   try {
-    // 1. SLASH COMMANDS
     if (interaction.isChatInputCommand()) {
       const { commandName } = interaction;
 
-      // 🎵 Xử lý lệnh Nhạc
       if (commandName === 'play') {
         const query = interaction.options.getString('query');
         const voiceChannel = interaction.member.voice.channel;
 
         if (!voiceChannel) {
-          return await interaction.reply({ content: '❌ Bạn phải vào một phòng thoại (Voice Channel) trước đã!', ephemeral: true });
+          return await interaction.reply({ content: '❌ Bạn phải vào một phòng thoại trước!', ephemeral: true });
         }
 
         await interaction.deferReply();
@@ -497,27 +414,27 @@ client.on(Events.InteractionCreate, async (interaction) => {
             textChannel: interaction.channel,
             member: interaction.member
           });
-          return await interaction.editReply(`🔍 Đang tìm kiếm: \`${query}\`...`);
+          return await interaction.editReply(`🔍 Đang tìm kiếm và phát: \`${query}\`...`);
         } catch (e) {
           console.error(e);
-          return await interaction.editReply('❌ Đã xảy ra lỗi khi cố gắng phát bài hát này!');
+          return await interaction.editReply('❌ Đã xảy ra lỗi khi cố gắng phát bài hát!');
         }
       }
 
       if (commandName === 'skip') {
         const queue = distube.getQueue(interaction.guildId);
-        if (!queue) return await interaction.reply({ content: '❌ Hiện tại không có bài nào đang phát cả!', ephemeral: true });
+        if (!queue) return await interaction.reply({ content: '❌ Hiện tại không có bài nào đang phát!', ephemeral: true });
         try {
-          const song = await queue.skip();
-          return await interaction.reply(`⏭️ Đã bỏ qua bài hát! Đang phát bài tiếp theo.`);
+          await queue.skip();
+          return await interaction.reply(`⏭️ Đã bỏ qua bài hát!`);
         } catch (e) {
-          return await interaction.reply({ content: '❌ Không thể bỏ qua (có thể hết bài trong hàng đợi rồi).', ephemeral: true });
+          return await interaction.reply({ content: '❌ Không thể bỏ qua bài hát.', ephemeral: true });
         }
       }
 
       if (commandName === 'stop') {
         const queue = distube.getQueue(interaction.guildId);
-        if (!queue) return await interaction.reply({ content: '❌ Bot có đang ở trong phòng thoại đâu!', ephemeral: true });
+        if (!queue) return await interaction.reply({ content: '❌ Bot chưa ở trong phòng thoại!', ephemeral: true });
         await distube.stop(interaction.guildId);
         return await interaction.reply('🛑 Đã dừng phát nhạc và rời khỏi phòng thoại!');
       }
@@ -525,7 +442,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       if (commandName === 'queue') {
         const queue = distube.getQueue(interaction.guildId);
         if (!queue) return await interaction.reply({ content: '❌ Hàng đợi nhạc đang trống!', ephemeral: true });
-        const q = queue.songs.map((song, i) => `${i === 1 ? '▶️' : `${i}.`} **${song.name}** - \`${song.formattedDuration}\``).join('\n');
+        const q = queue.songs.map((song, i) => `${i === 0 ? '▶️' : `${i}.`} **${song.name}** - \`${song.formattedDuration}\``).join('\n');
         const embed = new EmbedBuilder()
           .setTitle(`🎶 Danh sách hàng đợi - ${interaction.guild.name}`)
           .setDescription(q.slice(0, 4000))
@@ -536,7 +453,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       if (commandName === 'pause') {
         const queue = distube.getQueue(interaction.guildId);
         if (!queue) return await interaction.reply({ content: '❌ Không có nhạc đang phát!', ephemeral: true });
-        if (queue.paused) return await interaction.reply({ content: '⚠️ Nhạc đã được tạm dừng trước đó rồi!', ephemeral: true });
+        if (queue.paused) return await interaction.reply({ content: '⚠️ Nhạc đã tạm dừng rồi!', ephemeral: true });
         queue.pause();
         return await interaction.reply('⏸️ Đã tạm dừng phát nhạc.');
       }
@@ -544,12 +461,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
       if (commandName === 'resume') {
         const queue = distube.getQueue(interaction.guildId);
         if (!queue) return await interaction.reply({ content: '❌ Không có nhạc trong hàng đợi!', ephemeral: true });
-        if (!queue.paused) return await interaction.reply({ content: '⚠️ Nhạc vẫn đang phát bình thường mà!', ephemeral: true });
+        if (!queue.paused) return await interaction.reply({ content: '⚠️ Nhạc đang phát bình thường!', ephemeral: true });
         queue.resume();
         return await interaction.reply('▶️ Đã tiếp tục phát nhạc.');
       }
 
-      // Các lệnh cũ được giữ nguyên bên dưới[span_15](start_span)[span_15](end_span)
       if (commandName === 'check-hopnhau') {
         const user1 = interaction.options.getUser('user1') || interaction.user;
         const user2 = interaction.options.getUser('user2');
@@ -662,7 +578,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
       }
     }
 
-    // 2. PHÂN LOẠI BUTTON VÀ MODAL ĐIỂM DANH[span_16](start_span)[span_16](end_span)
     if (interaction.isButton() || interaction.isModalSubmit()) {
       const msgId = interaction.message?.id;
       let session = activeSessions.get(msgId);
@@ -857,8 +772,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 
   } catch (err) {
-    console.error('Lỗi khi xử lý Interaction[span_17](start_span)[span_17](end_span):', err);
+    console.error('Lỗi khi xử lý Interaction:', err);
   }
 });
 
-client.login(TOKEN);[span_18](start_span)[span_18](end_span)
+client.login(TOKEN);
