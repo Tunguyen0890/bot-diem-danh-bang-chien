@@ -18,13 +18,14 @@ const {
 } = require('discord.js');
 const { DisTube } = require('distube');
 const { YtDlpPlugin } = require('@distube/yt-dlp');
+const ffmpeg = require('ffmpeg-static');
 
-// ⚠️ Bot sử dụng Process Environment Variable TOKEN[span_2](start_span)[span_2](end_span)
+// ⚠️ Bot sử dụng Process Environment Variable TOKEN[span_3](start_span)[span_3](end_span)
 const TOKEN = process.env.TOKEN || 'YOUR_BOT_TOKEN_HERE';
 
 const BANNER_IMAGE = 'https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Z2eDFwZXRyNWJ1aGhybnMwbWN5OHAwMmdtbHJvMHFvMm5mMnF0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/L2XhHcmM55533fYnmA/giphy.gif';
 
-// 💡 Điền ID Emoji Discord của bạn vào đây (Ví dụ: '123456789012345678')[span_3](start_span)[span_3](end_span)
+// 💡 Điền ID Emoji Discord của bạn vào đây (Ví dụ: '123456789012345678')[span_4](start_span)[span_4](end_span)
 const CLASSES = [
   { id: 'culinh', name: 'Cửu Linh', emoji: '1540995232848420926' },
   { id: 'thantuong', name: 'Thần Tướng', emoji: '1540995230877097984' },
@@ -35,7 +36,7 @@ const CLASSES = [
   { id: 'huyetha', name: 'Huyết Hà', emoji: '1540995238909321327' }
 ];
 
-// GIF Anime Minh Họa cho từng lệnh Check[span_4](start_span)[span_4](end_span)
+// GIF Anime Minh Họa cho từng lệnh Check[span_5](start_span)[span_5](end_span)
 const CHECK_IMAGES = {
   gay: 'https://media.giphy.com/media/26gspjl5bxzhxoBWw/giphy.gif',
   les: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHYyOXhyNm1iZ3VreGtkbmdyNnk5ejFudGtrZTRldXlsNjcxMHVndyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0IybQ6l8J454o52w/giphy.gif',
@@ -45,7 +46,7 @@ const CHECK_IMAGES = {
   saygex: 'https://media.giphy.com/media/3o7TKzb326hYin7JFS/giphy.gif'
 };
 
-// Dữ liệu GIF & Nhận xét bựa tục cho từng mốc hợp nhau (0% -> 100%)[span_5](start_span)[span_5](end_span)
+// Dữ liệu GIF & Nhận xét bựa tục cho từng mốc hợp nhau (0% -> 100%)[span_6](start_span)[span_6](end_span)
 const COMPATIBILITY_DATA = {
   0: {
     gif: 'https://media.giphy.com/media/l1J9u3TZfpmeDLkD6/giphy.gif',
@@ -142,9 +143,12 @@ const client = new Client({
   ]
 });
 
-// Khởi tạo DisTube v5 chuẩn xác (không truyền ffmpegPath)[span_6](start_span)[span_6](end_span)
+// Khởi tạo DisTube v5 tích hợp sẵn đường dẫn ffmpeg-static chuẩn xác
 const distube = new DisTube(client, {
   emitNewSongOnly: true,
+  ffmpeg: {
+    path: ffmpeg
+  },
   plugins: [new YtDlpPlugin()]
 });
 
