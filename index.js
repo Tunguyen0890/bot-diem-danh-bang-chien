@@ -16,13 +16,17 @@ const {
   ChannelType,
   AttachmentBuilder
 } = require('discord.js');
+const { DisTube } = require('distube');
+const { SpotifyPlugin } = require('@distube/spotify');
+const { SoundCloudPlugin } = require('@distube/soundcloud');
+const { YtDlpPlugin } = require('@distube/yt-dlp');
 
-// ⚠️ Bot sử dụng Process Environment Variable TOKEN
+// ⚠️ Bot sử dụng Process Environment Variable TOKEN[span_1](start_span)[span_1](end_span)
 const TOKEN = process.env.TOKEN || 'YOUR_BOT_TOKEN_HERE';
 
 const BANNER_IMAGE = 'https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Z2eDFwZXRyNWJ1aGhybnMwbWN5OHAwMmdtbHJvMHFvMm5mMnF0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/L2XhHcmM55533fYnmA/giphy.gif';
 
-// 💡 Điền ID Emoji Discord của bạn vào đây (Ví dụ: '123456789012345678')
+// 💡 Điền ID Emoji Discord của bạn vào đây (Ví dụ: '123456789012345678')[span_2](start_span)[span_2](end_span)
 const CLASSES = [
   { id: 'culinh', name: 'Cửu Linh', emoji: '1540995232848420926' },
   { id: 'thantuong', name: 'Thần Tướng', emoji: '1540995230877097984' },
@@ -33,7 +37,7 @@ const CLASSES = [
   { id: 'huyetha', name: 'Huyết Hà', emoji: '1540995238909321327' }
 ];
 
-// GIF Anime Minh Họa cho từng lệnh Check
+// GIF Anime Minh Họa cho từng lệnh Check[span_3](start_span)[span_3](end_span)
 const CHECK_IMAGES = {
   gay: 'https://media.giphy.com/media/26gspjl5bxzhxoBWw/giphy.gif',
   les: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHYyOXhyNm1iZ3VreGtkbmdyNnk5ejFudGtrZTRldXlsNjcxMHVndyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l0IybQ6l8J454o52w/giphy.gif',
@@ -43,7 +47,7 @@ const CHECK_IMAGES = {
   saygex: 'https://media.giphy.com/media/3o7TKzb326hYin7JFS/giphy.gif'
 };
 
-// Dữ liệu GIF & Nhận xét bựa tục cho từng mốc hợp nhau (0% -> 100%)
+// Dữ liệu GIF & Nhận xét bựa tục cho từng mốc hợp nhau (0% -> 100%)[span_4](start_span)[span_4](end_span)
 const COMPATIBILITY_DATA = {
   0: {
     gif: 'https://media.giphy.com/media/l1J9u3TZfpmeDLkD6/giphy.gif',
@@ -135,7 +139,21 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildVoiceStates
+  ]
+});
+
+// Cấu hình DisTube Music Player giống Jokie
+const distube = new DisTube(client, {
+  emitNewSongOnly: true,
+  leaveOnEmpty: true,
+  leaveOnFinish: false,
+  leaveOnStop: true,
+  plugins: [
+    new SpotifyPlugin(),
+    new SoundCloudPlugin(),
+    new YtDlpPlugin()
   ]
 });
 
@@ -144,7 +162,7 @@ const activeSessions = new Map();
 process.on('unhandledRejection', (error) => console.error('Hệ thống bắt Unhandled Rejection:', error));
 process.on('uncaughtException', (error) => console.error('Hệ thống bắt Uncaught Exception:', error));
 
-// Hàm xuất dữ liệu phiên điểm danh ra chuỗi JSON
+// Hàm xuất dữ liệu phiên điểm danh ra chuỗi JSON[span_5](start_span)[span_5](end_span)
 function buildSessionJSON(session) {
   const jsonOutput = {
     session_id: session.id,
@@ -159,7 +177,7 @@ function buildSessionJSON(session) {
   return JSON.stringify(jsonOutput, null, 2);
 }
 
-// Hàm tạo Attachment File JSON để gửi vào kênh
+// Hàm tạo Attachment File JSON để gửi vào kênh[span_6](start_span)[span_6](end_span)
 function createJSONAttachment(session) {
   const jsonString = buildSessionJSON(session);
   return new AttachmentBuilder(Buffer.from(jsonString, 'utf-8'), {
@@ -167,13 +185,13 @@ function createJSONAttachment(session) {
   });
 }
 
-// Hàm hiển thị Emoji (ID hoặc Unicode) trên Embed
+// Hàm hiển thị Emoji (ID hoặc Unicode) trên Embed[span_7](start_span)[span_7](end_span)
 function getEmojiString(emoji) {
   if (!emoji) return '⚔️';
   return /^\d+$/.test(emoji) ? `<:custom:${emoji}>` : emoji;
 }
 
-// Hàm tính % cố định dựa trên User ID
+// Hàm tính % cố định dựa trên User ID[span_8](start_span)[span_8](end_span)
 function getPercentage(userId, type) {
   let hash = 0;
   const str = userId + type;
@@ -183,7 +201,7 @@ function getPercentage(userId, type) {
   return Math.abs(hash) % 101;
 }
 
-// Hàm tính % hợp nhau giữa 2 người dùng cố định
+// Hàm tính % hợp nhau giữa 2 người dùng cố định[span_9](start_span)[span_9](end_span)
 function getCouplePercentage(userId1, userId2) {
   const sortedIds = [userId1, userId2].sort().join('_');
   let hash = 0;
@@ -200,13 +218,13 @@ function createProgressBar(percent, emoji = '🏳️‍🌈') {
   return `[${emoji.repeat(progress)}${'⬛'.repeat(empty)}] **${percent}%**`;
 }
 
-// Hàm lấy dữ liệu GIF và comment cho độ hợp nhau lùi về bội số của 5
+// Hàm lấy dữ liệu GIF và comment cho độ hợp nhau lùi về bội số của 5[span_10](start_span)[span_10](end_span)
 function getCompatibilityData(percent) {
   const rounded = Math.floor(percent / 5) * 5;
   return COMPATIBILITY_DATA[rounded] || COMPATIBILITY_DATA[0];
 }
 
-// Hàm trả về comment mặn mòi, bựa cho từng loại
+// Hàm trả về comment mặn mòi, bựa cho từng loại[span_11](start_span)[span_11](end_span)
 function getCheckComment(type, percent) {
   const comments = {
     gay: [
@@ -263,7 +281,7 @@ function buildEmbed(session) {
     .setThumbnail(BANNER_IMAGE)
     .setColor(session.isOpen ? '#0099FF' : '#FF0000')
     .addFields(
-      { name: '📌 Trạng thái', value: session.isOpen ? '🟢 **ĐANG MỞ BÁO DANH**' : '🔴 **ĐÃ ĐÓNG**', inline: true },
+      { name: '📌 Trạng thái', value: session.isOpen ? '🟢 **Đang MỞ BÁO DANH**' : '🔴 **ĐÃ ĐÓNG**', inline: true },
       { name: '⏳ Thời hạn', value: session.expiresAt ? `<t:${Math.floor(session.expiresAt / 1000)}:R>` : 'Không giới hạn', inline: true },
       { name: `👥 Tổng số tham gia: **${total}** người`, value: '─────────────────────────────', inline: false }
     );
@@ -350,7 +368,7 @@ function buildComponents(isOpen = true) {
 }
 
 client.on(Events.ClientReady, async () => {
-  console.log(`🤖 Bot đã khởi động với tên: ${client.user.tag}`);
+  console.log(`🤖 Bot đã khởi động với tên: ${client.user.tag}[span_12](start_span)[span_12](end_span)`);
   const rest = new REST({ version: '10' }).setToken(TOKEN);
 
   const integrationTypes = [0, 1];
@@ -414,13 +432,48 @@ client.on(Events.ClientReady, async () => {
           .addUserOption(opt => opt.setName('user2').setDescription('Người thứ hai muốn kiểm tra').setRequired(true))
           .addUserOption(opt => opt.setName('user1').setDescription('Người thứ nhất (Để trống sẽ lấy chính bạn)').setRequired(false))
           .setIntegrationTypes(integrationTypes)
-          .setContexts(contexts)
+          .setContexts(contexts),
+
+        // 🎵 CÁC LỆNH PHÁT NHẠC GIỐNG CON JOKIE
+        new SlashCommandBuilder()
+          .setName('play')
+          .setDescription('Phát bài hát từ YouTube, Spotify hoặc SoundCloud')
+          .addStringOption(opt => opt.setName('query').setDescription('Tên bài hát hoặc đường dẫn (URL)').setRequired(true)),
+
+        new SlashCommandBuilder()
+          .setName('skip')
+          .setDescription('Bỏ qua bài hát hiện tại'),
+
+        new SlashCommandBuilder()
+          .setName('stop')
+          .setDescription('Dừng phát nhạc và đuổi bot khỏi phòng thoại'),
+
+        new SlashCommandBuilder()
+          .setName('queue')
+          .setDescription('Xem danh sách bài hát đang đợi'),
+
+        new SlashCommandBuilder()
+          .setName('pause')
+          .setDescription('Tạm dừng phát nhạc'),
+
+        new SlashCommandBuilder()
+          .setName('resume')
+          .setDescription('Tiếp tục phát nhạc')
       ]
     });
-    console.log('✅ Đã cập nhật xong hệ thống Slash Command!');
+    console.log('✅ Đã cập nhật xong hệ thống Slash Command[span_13](start_span)[span_13](end_span)!');
   } catch (e) {
-    console.error('Lỗi đăng ký Slash Command:', e);
+    console.error('Lỗi đăng ký Slash Command[span_14](start_span)[span_14](end_span):', e);
   }
+});
+
+// Sự kiện thông báo khi bot bắt đầu phát bài hát mới
+distube.on('playSong', (queue, song) => {
+  queue.textChannel?.send(`🎶 Đang phát: **${song.name}** - \`${song.formattedDuration}\``);
+});
+
+distube.on('addSong', (queue, song) => {
+  queue.textChannel?.send(`✅ Đã thêm vào hàng đợi: **${song.name}** - \`${song.formattedDuration}\``);
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
@@ -429,6 +482,74 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.isChatInputCommand()) {
       const { commandName } = interaction;
 
+      // 🎵 Xử lý lệnh Nhạc
+      if (commandName === 'play') {
+        const query = interaction.options.getString('query');
+        const voiceChannel = interaction.member.voice.channel;
+
+        if (!voiceChannel) {
+          return await interaction.reply({ content: '❌ Bạn phải vào một phòng thoại (Voice Channel) trước đã!', ephemeral: true });
+        }
+
+        await interaction.deferReply();
+        try {
+          await distube.play(voiceChannel, query, {
+            textChannel: interaction.channel,
+            member: interaction.member
+          });
+          return await interaction.editReply(`🔍 Đang tìm kiếm: \`${query}\`...`);
+        } catch (e) {
+          console.error(e);
+          return await interaction.editReply('❌ Đã xảy ra lỗi khi cố gắng phát bài hát này!');
+        }
+      }
+
+      if (commandName === 'skip') {
+        const queue = distube.getQueue(interaction.guildId);
+        if (!queue) return await interaction.reply({ content: '❌ Hiện tại không có bài nào đang phát cả!', ephemeral: true });
+        try {
+          const song = await queue.skip();
+          return await interaction.reply(`⏭️ Đã bỏ qua bài hát! Đang phát bài tiếp theo.`);
+        } catch (e) {
+          return await interaction.reply({ content: '❌ Không thể bỏ qua (có thể hết bài trong hàng đợi rồi).', ephemeral: true });
+        }
+      }
+
+      if (commandName === 'stop') {
+        const queue = distube.getQueue(interaction.guildId);
+        if (!queue) return await interaction.reply({ content: '❌ Bot có đang ở trong phòng thoại đâu!', ephemeral: true });
+        await distube.stop(interaction.guildId);
+        return await interaction.reply('🛑 Đã dừng phát nhạc và rời khỏi phòng thoại!');
+      }
+
+      if (commandName === 'queue') {
+        const queue = distube.getQueue(interaction.guildId);
+        if (!queue) return await interaction.reply({ content: '❌ Hàng đợi nhạc đang trống!', ephemeral: true });
+        const q = queue.songs.map((song, i) => `${i === 1 ? '▶️' : `${i}.`} **${song.name}** - \`${song.formattedDuration}\``).join('\n');
+        const embed = new EmbedBuilder()
+          .setTitle(`🎶 Danh sách hàng đợi - ${interaction.guild.name}`)
+          .setDescription(q.slice(0, 4000))
+          .setColor('#0099FF');
+        return await interaction.reply({ embeds: [embed] });
+      }
+
+      if (commandName === 'pause') {
+        const queue = distube.getQueue(interaction.guildId);
+        if (!queue) return await interaction.reply({ content: '❌ Không có nhạc đang phát!', ephemeral: true });
+        if (queue.paused) return await interaction.reply({ content: '⚠️ Nhạc đã được tạm dừng trước đó rồi!', ephemeral: true });
+        queue.pause();
+        return await interaction.reply('⏸️ Đã tạm dừng phát nhạc.');
+      }
+
+      if (commandName === 'resume') {
+        const queue = distube.getQueue(interaction.guildId);
+        if (!queue) return await interaction.reply({ content: '❌ Không có nhạc trong hàng đợi!', ephemeral: true });
+        if (!queue.paused) return await interaction.reply({ content: '⚠️ Nhạc vẫn đang phát bình thường mà!', ephemeral: true });
+        queue.resume();
+        return await interaction.reply('▶️ Đã tiếp tục phát nhạc.');
+      }
+
+      // Các lệnh cũ được giữ nguyên bên dưới[span_15](start_span)[span_15](end_span)
       if (commandName === 'check-hopnhau') {
         const user1 = interaction.options.getUser('user1') || interaction.user;
         const user2 = interaction.options.getUser('user2');
@@ -541,7 +662,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       }
     }
 
-    // 2. PHÂN LOẠI BUTTON VÀ MODAL ĐIỂM DANH
+    // 2. PHÂN LOẠI BUTTON VÀ MODAL ĐIỂM DANH[span_16](start_span)[span_16](end_span)
     if (interaction.isButton() || interaction.isModalSubmit()) {
       const msgId = interaction.message?.id;
       let session = activeSessions.get(msgId);
@@ -549,7 +670,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
       if (interaction.isButton() && interaction.customId === 'a_admin') {
         if (!session) return await interaction.reply({ content: '⚠️ Dữ liệu phiên không tồn tại trên bộ nhớ tạm!', ephemeral: true });
 
-        // PHÂN QUYỀN CHẶT CHẼ
         const isOwner = session.creatorId === interaction.user.id;
         const isServerOwner = interaction.guild?.ownerId === interaction.user.id;
         const isAdmin = interaction.memberPermissions?.has(PermissionsBitField.Flags.Administrator);
@@ -737,8 +857,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 
   } catch (err) {
-    console.error('Lỗi khi xử lý Interaction:', err);
+    console.error('Lỗi khi xử lý Interaction[span_17](start_span)[span_17](end_span):', err);
   }
 });
 
-client.login(TOKEN);
+client.login(TOKEN);[span_18](start_span)[span_18](end_span)
