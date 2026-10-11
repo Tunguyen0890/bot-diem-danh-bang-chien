@@ -18,6 +18,7 @@ const {
 } = require('discord.js');
 const { DisTube } = require('distube');
 const { YtDlpPlugin } = require('@distube/yt-dlp');
+const ffmpeg = require('ffmpeg-static');
 
 // ⚠️ Bot sử dụng Process Environment Variable TOKEN[span_2](start_span)[span_2](end_span)
 const TOKEN = process.env.TOKEN || 'YOUR_BOT_TOKEN_HERE';
@@ -142,9 +143,10 @@ const client = new Client({
   ]
 });
 
-// Khởi tạo DisTube v5
+// Khởi tạo DisTube v5 tích hợp sẵn ffmpeg-static
 const distube = new DisTube(client, {
   emitNewSongOnly: true,
+  ffmpegPath: ffmpeg,
   plugins: [new YtDlpPlugin()]
 });
 
@@ -489,7 +491,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
           return await interaction.editReply(`🔍 Đang xử lý yêu cầu: \`${query}\`...`);
         } catch (e) {
           console.error('Lỗi phát nhạc DisTube:', e);
-          return await interaction.editReply(`❌ Không thể phát nhạc. Chi tiết lỗi: \`${e.message || 'Lỗi không xác định'}\`. (Mẹo: Hãy dùng link YouTube trực tiếp thay vì gõ tên).`);
+          return await interaction.editReply(`❌ Không thể phát nhạc. Chi tiết lỗi: \`${e.message || 'Lỗi không xác định'}\`.`);
         }
       }
 
@@ -846,7 +848,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 
   } catch (err) {
-    console.error('Lỗi khi xử lý Interaction[span_18](start_span)[span_18](end_span):', err);
+    console.error('Lỗi khi xử lý Interaction:[span_18](start_span)[span_18](end_span)', err);
   }
 });
 
