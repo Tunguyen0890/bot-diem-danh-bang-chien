@@ -18,7 +18,6 @@ const {
 } = require('discord.js');
 const { DisTube } = require('distube');
 const { YtDlpPlugin } = require('@distube/yt-dlp');
-const ffmpeg = require('ffmpeg-static');
 
 // ⚠️ Bot sử dụng Process Environment Variable TOKEN[span_2](start_span)[span_2](end_span)
 const TOKEN = process.env.TOKEN || 'YOUR_BOT_TOKEN_HERE';
@@ -143,10 +142,9 @@ const client = new Client({
   ]
 });
 
-// Khởi tạo DisTube v5 tích hợp sẵn ffmpeg-static
+// Khởi tạo DisTube v5 chuẩn xác (không truyền ffmpegPath)[span_6](start_span)[span_6](end_span)
 const distube = new DisTube(client, {
   emitNewSongOnly: true,
-  ffmpegPath: ffmpeg,
   plugins: [new YtDlpPlugin()]
 });
 
@@ -155,7 +153,7 @@ const activeSessions = new Map();
 process.on('unhandledRejection', (error) => console.error('Hệ thống bắt Unhandled Rejection:', error));
 process.on('uncaughtException', (error) => console.error('Hệ thống bắt Uncaught Exception:', error));
 
-// Hàm xuất dữ liệu phiên điểm danh ra chuỗi JSON[span_6](start_span)[span_6](end_span)
+// Hàm xuất dữ liệu phiên điểm danh ra chuỗi JSON[span_7](start_span)[span_7](end_span)
 function buildSessionJSON(session) {
   const jsonOutput = {
     session_id: session.id,
@@ -170,7 +168,7 @@ function buildSessionJSON(session) {
   return JSON.stringify(jsonOutput, null, 2);
 }
 
-// Hàm tạo Attachment File JSON để gửi vào kênh[span_7](start_span)[span_7](end_span)
+// Hàm tạo Attachment File JSON để gửi vào kênh[span_8](start_span)[span_8](end_span)
 function createJSONAttachment(session) {
   const jsonString = buildSessionJSON(session);
   return new AttachmentBuilder(Buffer.from(jsonString, 'utf-8'), {
@@ -178,13 +176,13 @@ function createJSONAttachment(session) {
   });
 }
 
-// Hàm hiển thị Emoji (ID hoặc Unicode) trên Embed[span_8](start_span)[span_8](end_span)
+// Hàm hiển thị Emoji (ID hoặc Unicode) trên Embed[span_9](start_span)[span_9](end_span)
 function getEmojiString(emoji) {
   if (!emoji) return '⚔️';
   return /^\d+$/.test(emoji) ? `<:custom:${emoji}>` : emoji;
 }
 
-// Hàm tính % cố định dựa trên User ID[span_9](start_span)[span_9](end_span)
+// Hàm tính % cố định dựa trên User ID[span_10](start_span)[span_10](end_span)
 function getPercentage(userId, type) {
   let hash = 0;
   const str = userId + type;
@@ -194,7 +192,7 @@ function getPercentage(userId, type) {
   return Math.abs(hash) % 101;
 }
 
-// Hàm tính % hợp nhau giữa 2 người dùng cố định[span_10](start_span)[span_10](end_span)
+// Hàm tính % hợp nhau giữa 2 người dùng cố định[span_11](start_span)[span_11](end_span)
 function getCouplePercentage(userId1, userId2) {
   const sortedIds = [userId1, userId2].sort().join('_');
   let hash = 0;
@@ -211,13 +209,13 @@ function createProgressBar(percent, emoji = '🏳️‍🌈') {
   return `[${emoji.repeat(progress)}${'⬛'.repeat(empty)}] **${percent}%**`;
 }
 
-// Hàm lấy dữ liệu GIF và comment cho độ hợp nhau lùi về bội số của 5[span_11](start_span)[span_11](end_span)
+// Hàm lấy dữ liệu GIF và comment cho độ hợp nhau lùi về bội số của 5[span_12](start_span)[span_12](end_span)
 function getCompatibilityData(percent) {
   const rounded = Math.floor(percent / 5) * 5;
   return COMPATIBILITY_DATA[rounded] || COMPATIBILITY_DATA[0];
 }
 
-// Hàm trả về comment mặn mòi, bựa cho từng loại[span_12](start_span)[span_12](end_span)
+// Hàm trả về comment mặn mòi, bựa cho từng loại[span_13](start_span)[span_13](end_span)
 function getCheckComment(type, percent) {
   const comments = {
     gay: [
@@ -361,7 +359,7 @@ function buildComponents(isOpen = true) {
 }
 
 client.on(Events.ClientReady, async () => {
-  console.log(`🤖 Bot đã khởi động với tên: ${client.user.tag}[span_13](start_span)[span_13](end_span)`);
+  console.log(`🤖 Bot đã khởi động với tên: ${client.user.tag}`);[span_14](start_span)[span_14](end_span)
   const rest = new REST({ version: '10' }).setToken(TOKEN);
 
   const integrationTypes = [0, 1];
@@ -454,9 +452,9 @@ client.on(Events.ClientReady, async () => {
           .setDescription('Tiếp tục phát nhạc')
       ]
     });
-    console.log('✅ Đã cập nhật xong hệ thống Slash Command[span_14](start_span)[span_14](end_span)!');
+    console.log('✅ Đã cập nhật xong hệ thống Slash Command!');[span_15](start_span)[span_15](end_span)
   } catch (e) {
-    console.error('Lỗi đăng ký Slash Command:[span_15](start_span)[span_15](end_span)', e);
+    console.error('Lỗi đăng ký Slash Command:', e);[span_16](start_span)[span_16](end_span)
   }
 });
 
@@ -652,7 +650,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       }
     }
 
-    // 2. PHÂN LOẠI BUTTON VÀ MODAL ĐIỂM DANH[span_16](start_span)[span_16](end_span)
+    // 2. PHÂN LOẠI BUTTON VÀ MODAL ĐIỂM DANH[span_17](start_span)[span_17](end_span)
     if (interaction.isButton() || interaction.isModalSubmit()) {
       const msgId = interaction.message?.id;
       let session = activeSessions.get(msgId);
@@ -660,7 +658,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       if (interaction.isButton() && interaction.customId === 'a_admin') {
         if (!session) return await interaction.reply({ content: '⚠️ Dữ liệu phiên không tồn tại trên bộ nhớ tạm!', ephemeral: true });
 
-        // PHÂN QUYỀN CHẶT CHẼ[span_17](start_span)[span_17](end_span)
+        // PHÂN QUYỀN CHẶT CHẼ[span_18](start_span)[span_18](end_span)
         const isOwner = session.creatorId === interaction.user.id;
         const isServerOwner = interaction.guild?.ownerId === interaction.user.id;
         const isAdmin = interaction.memberPermissions?.has(PermissionsBitField.Flags.Administrator);
@@ -848,8 +846,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 
   } catch (err) {
-    console.error('Lỗi khi xử lý Interaction:[span_18](start_span)[span_18](end_span)', err);
+    console.error('Lỗi khi xử lý Interaction:', err);[span_19](start_span)[span_19](end_span)
   }
 });
 
-client.login(TOKEN);[span_19](start_span)[span_19](end_span)
+client.login(TOKEN);[span_20](start_span)[span_20](end_span)
