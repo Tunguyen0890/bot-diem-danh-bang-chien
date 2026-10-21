@@ -30,7 +30,8 @@ const CLASSES = [
   { id: 'toaimong', name: 'Toái Mộng', emoji: '1540995237084798986' },
   { id: 'longngam', name: 'Long Ngâm', emoji: '1540995228448723025' },
   { id: 'tovan', name: 'Tố Vấn', emoji: '1540995234840846437' },
-  { id: 'huyetha', name: 'Huyết Hà', emoji: '1540995238909321327' }
+  { id: 'huyetha', name: 'Huyết Hà', emoji: '1540995238909321327' },
+  { id: 'huyenco', name: 'Huyền Cơ', emoji: '1562439089771253810' } // Đã thêm Huyền Cơ
 ];
 
 // GIF Anime Minh Họa cho từng lệnh Check
@@ -414,6 +415,13 @@ client.on(Events.ClientReady, async () => {
           .addUserOption(opt => opt.setName('user2').setDescription('Người thứ hai muốn kiểm tra').setRequired(true))
           .addUserOption(opt => opt.setName('user1').setDescription('Người thứ nhất (Để trống sẽ lấy chính bạn)').setRequired(false))
           .setIntegrationTypes(integrationTypes)
+          .setContexts(contexts),
+
+        new SlashCommandBuilder()
+          .setName('check-chuavote')
+          .setDescription('Kiểm tra những ai có role chỉ định mà chưa điểm danh bang chiến')
+          .addRoleOption(opt => opt.setName('role').setDescription('Chọn role cần kiểm tra').setRequired(true))
+          .setIntegrationTypes(integrationTypes)
           .setContexts(contexts)
       ]
     });
@@ -428,6 +436,65 @@ client.on(Events.InteractionCreate, async (interaction) => {
     // 1. SLASH COMMANDS
     if (interaction.isChatInputCommand()) {
       const { commandName } = interaction;
+
+      if (commandName === 'check-chuavote') {
+        const targetRole = interaction.options.getRole('role');
+        
+        let session = null;
+        for (const [_, s] of activeSessions.entries()) {
+          session = s;
+        }
+
+        if (!session) {
+          return await interaction.reply({ content: '❌ Không tìm thấy phiên điểm danh nào đang hoạt động hoặc vừa được tạo trong bộ nhớ của bot!', ephemeral: true });
+        }
+
+        await interaction.deferReply({ ephemeral: true });
+
+        try {
+          await interaction.guild.members.fetch();
+
+          const votedUserIds = new Set();
+          CLASSES.forEach(c => {
+            if (session.members?.[c.id]) {
+              session.members[c.id].forEach(m => votedUserIds.add(m.userId));
+            }
+          });
+          if (session.busyList) {
+            session.busyList.forEach(b => votedUserIds.add(b.userId));
+          }
+
+          const unvotedMembers = interaction.guild.members.cache.filter(member => {
+            return member.roles.cache.has(targetRole.id) && !votedUserIds.has(member.id) && !member.user.bot;
+          });
+
+          const unvotedArray = Array.from(unvotedMembers.values());
+
+          if (unvotedArray.length === 0) {
+            return await interaction.editReply({ content: `✅ Tuyệt vời! Tất cả thành viên mang role **${targetRole.name}** đều đã điểm danh hoặc báo bận đầy đủ.` });
+          }
+
+          const chunks = [];
+          for (let i = 0; i < unvotedArray.length; i += 20) {
+            chunks.push(unvotedArray.slice(i, i + 20));
+          }
+
+          const embeds = chunks.map((chunk, index) => {
+            const description = chunk.map((m, idx) => `${index * 20 + idx + 1}. <@${m.id}> (${m.user.tag})`).join('\n');
+            return new EmbedBuilder()
+              .setTitle(`⚠️ DANH SÁCH CHƯA ĐIỂM DANH (${targetRole.name})`)
+              .setColor('#FFA500')
+              .setDescription(description)
+              .setFooter({ text: `Trang ${index + 1}/${chunks.length} • Tổng chưa vote: ${unvotedArray.length} người` });
+          });
+
+          return await interaction.editReply({ embeds: embeds });
+
+        } catch (error) {
+          console.error('Lỗi khi check chưa vote:', error);
+          return await interaction.editReply({ content: '❌ Đã có lỗi xảy ra khi lọc danh sách thành viên trong role!' });
+        }
+      }
 
       if (commandName === 'check-hopnhau') {
         const user1 = interaction.options.getUser('user1') || interaction.user;
