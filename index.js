@@ -18,7 +18,7 @@ const {
 } = require('discord.js');
 
 // ⚠️ Bot sử dụng Process Environment Variable TOKEN
-const TOKEN = process.env.TOKEN || 'MTU0MDgxNjk3NzI2NDY0MDA2MQ.GHpT1q.tYdFAo8az4sj_U0vG8S28Ls3v6uDKb0_uitbhs';
+const TOKEN = process.env.TOKEN || 'YOUR_BOT_TOKEN_HERE';
 
 const BANNER_IMAGE = 'https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3Z2eDFwZXRyNWJ1aGhybnMwbWN5OHAwMmdtbHJvMHFvMm5mMnF0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/L2XhHcmM55533fYnmA/giphy.gif';
 
